@@ -44,6 +44,7 @@ export function TemplatesSection() {
     minimal: { id: BUILTIN_TEMPLATE_IDS.minimal, engagementCount: 0, isEngaged: false },
     standard: { id: BUILTIN_TEMPLATE_IDS.standard, engagementCount: 0, isEngaged: false },
     full: { id: BUILTIN_TEMPLATE_IDS.full, engagementCount: 0, isEngaged: false },
+    "ai-split": { id: BUILTIN_TEMPLATE_IDS["ai-split"], engagementCount: 0, isEngaged: false },
   });
 
   React.useEffect(() => {
@@ -51,13 +52,13 @@ export function TemplatesSection() {
     let cancelled = false;
     const run = async () => {
       try {
-        const ids = [BUILTIN_TEMPLATE_IDS.minimal, BUILTIN_TEMPLATE_IDS.standard, BUILTIN_TEMPLATE_IDS.full].join(",");
-        const stats = await loadBuiltinTemplateEngagement(ids.split(","));
+        const stats = await loadBuiltinTemplateEngagement(Object.values(BUILTIN_TEMPLATE_IDS));
         if (cancelled) return;
         setBuiltinEngagement({
           minimal: stats.minimal ?? { id: BUILTIN_TEMPLATE_IDS.minimal, engagementCount: 0, isEngaged: false },
           standard: stats.standard ?? { id: BUILTIN_TEMPLATE_IDS.standard, engagementCount: 0, isEngaged: false },
           full: stats.full ?? { id: BUILTIN_TEMPLATE_IDS.full, engagementCount: 0, isEngaged: false },
+          "ai-split": stats["ai-split"] ?? { id: BUILTIN_TEMPLATE_IDS["ai-split"], engagementCount: 0, isEngaged: false },
         });
       } catch {
         // ignore

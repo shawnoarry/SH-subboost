@@ -29,4 +29,10 @@ export const templates = [
     description: "全部功能 + 扩展规则集",
     ...countsFor("full"),
   },
+  {
+    id: "ai-split" as TemplateType,
+    name: "AI 独立分流版",
+    description: "完整版 + OpenAI / Codex、Claude、Gemini 独立选节点",
+    ...countsFor("ai-split"),
+  },
 ];

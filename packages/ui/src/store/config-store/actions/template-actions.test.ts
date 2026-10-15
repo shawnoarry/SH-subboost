@@ -28,6 +28,25 @@ function createHarness(overrides: Record<string, unknown> = {}) {
 }
 
 describe("createTemplateActions", () => {
+  it("applies the AI split preset without changing imported nodes or source settings", () => {
+    const nodes = [{ name: "Example", type: "ss", server: "example.com", port: 443 }];
+    const sources = [{ id: "source", type: "nodes", content: "example" }];
+    const { actions, getState } = createHarness({ nodes, sources, dnsYaml: "dns: { enable: true }" });
+
+    actions.setTemplate("ai-split");
+
+    expect(getState()).toMatchObject({
+      template: "ai-split",
+      appliedTemplateId: "builtin-ai-split",
+      enabledProxyGroups: TEMPLATES["ai-split"].groups,
+      nodes,
+      sources,
+      dnsYaml: "dns: { enable: true }",
+    });
+    expect(getState().enabledProxyGroups).toEqual(expect.arrayContaining(["openai", "claude", "gemini", "ai-other", "google", "youtube", "github"]));
+    expect(getState().enabledProxyGroups).not.toContain("ai");
+  });
+
   it("switches builtin templates and resets template-specific edits", () => {
     const { actions, getState } = createHarness({
       enabledProxyGroups: ["select", "ai"],

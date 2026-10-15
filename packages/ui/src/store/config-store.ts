@@ -16,6 +16,8 @@ import { createDialerActions } from "./config-store/actions/dialer-actions";
 import { createSettingsActions } from "./config-store/actions/settings-actions";
 import { createGroupListenerActions } from "./config-store/actions/group-listener-actions";
 import { createHistoryActions } from "./config-store/actions/history-actions";
+import { isConfigDraftMemoryOnly, setConfigDraftMemoryOnly } from "./config-store/draft-privacy";
+import { clearAuthConfigHandoff } from "./config-store/auth-handoff";
 import {
   CONFIG_DRAFT_GUEST_STORAGE_NAME,
   CONFIG_DRAFT_STORAGE_VERSION,
@@ -88,10 +90,18 @@ export const useConfigStore = create<ConfigState & ConfigActions>()(
         normalizePersistedConfigState(persistedState, {
           discardDraft: version !== CONFIG_DRAFT_STORAGE_VERSION,
         }),
-      partialize: partializeConfigState,
+      partialize: (state) => isConfigDraftMemoryOnly() ? {} : partializeConfigState(state),
     }
   )
 );
+
+export function setConfigDraftEphemeral(enabled: boolean): void {
+  setConfigDraftMemoryOnly(enabled);
+  if (enabled) {
+    useConfigStore.persist.clearStorage();
+    clearAuthConfigHandoff();
+  }
+}
 
 export function setConfigDraftUserScope(userId: string | null | undefined) {
   if (typeof window === "undefined") return;
@@ -99,6 +109,7 @@ export function setConfigDraftUserScope(userId: string | null | undefined) {
   const { storageName, state } = prepareConfigDraftScope(configDraftStorage, userId);
   if (activeConfigDraftStorageName === storageName) return;
 
+  setConfigDraftMemoryOnly(false);
   activeConfigDraftStorageName = storageName;
   useConfigStore.persist.setOptions({ name: storageName });
   useConfigStore.setState((current) => ({ ...initialState, ...state, draftRevision: current.draftRevision + 1 }));

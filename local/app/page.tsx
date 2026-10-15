@@ -4,8 +4,10 @@ import { HomeSurface, type HomeSurfaceAdapter } from "@subboost/ui/product/home/
 import { readSourceImportResponse } from "@subboost/ui/product/client-response";
 import { createRulesProductApi } from "@subboost/ui/product/api-adapter";
 import { LOCAL_AUTO_UPDATE_POLICY } from "@local/lib/auto-update-policy";
+import { WorkspaceSync } from "@local/components/workspace-sync";
 
 const localHomeAdapter: HomeSurfaceAdapter = {
+  renderNotice: () => <WorkspaceSync />,
   loginHref: "/login",
   templateUploadHref: "/templates?upload=1",
   productApi: {

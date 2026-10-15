@@ -23,8 +23,10 @@
 - **Chained proxies**: Configure chained proxies and `relay proxy groups` visually in one click.
 - **Precise routing**: Enable more than 30 common proxy groups and over 2,000 remote rule sets.
 - **Rule management**: Reorder rules for deeper customization by advanced users.
+- **Separate AI routing preset**: Choose independent nodes for OpenAI / Codex, Claude, and Gemini while retaining the full preset's Google, YouTube, and GitHub groups. [Guide (Chinese)](docs/ai-routing.md)
 - **DNS leak prevention**: The default `basic and DNS configuration` helps prevent DNS leaks.
 - **Automatic refresh**: Refresh subscriptions on a schedule and intelligently match nodes during refresh.
+- **Encrypted workspaces**: Transfer the complete editable configuration between independent PCs, with encrypted export/import and synchronized-file conflict checks. [Guide](docs/workspace-sync.md)
 
 ## Interface Preview
 

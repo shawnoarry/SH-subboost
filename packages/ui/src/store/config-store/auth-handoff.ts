@@ -1,9 +1,11 @@
 import type { ConfigState, SourceType, SubscriptionSource } from "./definitions";
+import { isTemplateType } from "@subboost/core/types/config";
 import { initialState } from "./definitions";
 import { safeParseJsonObject } from "@subboost/core/json";
 import { normalizeNodeNameFilterConfig } from "@subboost/core/subscription/node-name-filter";
 import { resolveProxyGroupAdvancedModeEnabled } from "@subboost/core/proxy-group-advanced-mode";
 import { normalizeRuleModelFromConfig } from "@subboost/core/rules/rule-model";
+import { isConfigDraftMemoryOnly } from "./draft-privacy";
 
 export const AUTH_CONFIG_HANDOFF_STORAGE_NAME = "subboost-auth-config-handoff";
 
@@ -191,7 +193,7 @@ function normalizeHandoffState(raw: unknown): Partial<ConfigState> | null {
   if (deletedNodeNames) out.deletedNodeNames = deletedNodeNames;
   const deletedNodes = objectArray<ConfigState["deletedNodes"][number]>(raw.deletedNodes);
   if (deletedNodes) out.deletedNodes = deletedNodes;
-  if (raw.template === "minimal" || raw.template === "standard" || raw.template === "full") out.template = raw.template;
+  if (isTemplateType(raw.template)) out.template = raw.template;
   const enabledProxyGroups = stringArray(raw.enabledProxyGroups);
   if (enabledProxyGroups) out.enabledProxyGroups = enabledProxyGroups;
   const hiddenProxyGroups = stringArray(raw.hiddenProxyGroups);
@@ -266,6 +268,10 @@ function readHandoff(storage: AuthConfigHandoffStorage): Partial<ConfigState> | 
 export function captureAuthConfigHandoff(state: ConfigState): void {
   const storage = getSessionStorage();
   if (!storage) return;
+  if (isConfigDraftMemoryOnly()) {
+    clearAuthConfigHandoff();
+    return;
+  }
   if (!hasMeaningfulConfig(state)) {
     storage.removeItem(AUTH_CONFIG_HANDOFF_STORAGE_NAME);
     return;
@@ -281,6 +287,11 @@ export function captureAuthConfigHandoff(state: ConfigState): void {
   } catch {
     storage.removeItem(AUTH_CONFIG_HANDOFF_STORAGE_NAME);
   }
+}
+
+export function clearAuthConfigHandoff(): void {
+  try { getSessionStorage()?.removeItem(AUTH_CONFIG_HANDOFF_STORAGE_NAME); }
+  catch { /* Storage may be unavailable in a restricted browser. */ }
 }
 
 export function consumeAuthConfigHandoff(): Partial<ConfigState> | null {

@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { SubscriptionSource } from "@subboost/ui/store/config-store";
 import type { ParsedNode } from "@subboost/core/types/node";
+import { isTemplateType } from "@subboost/core/types/config";
 import type { EditingSubscriptionLoaderOptions } from "./editing-subscription-types";
 import { normalizePersistedRuleOrder } from "@subboost/core/generator/rules";
 import { ensureCustomRulesHaveIds } from "@subboost/core/rules/custom-rule-utils";
@@ -365,10 +366,7 @@ export function useEditingSubscriptionLoader({
           });
         })();
 
-        const templateFromCfg =
-          cfg.template === "minimal" || cfg.template === "standard" || cfg.template === "full"
-            ? (cfg.template as "minimal" | "standard" | "full")
-            : "standard";
+        const templateFromCfg = isTemplateType(cfg.template) ? cfg.template : "standard";
 
         const enabledGroupsFromCfg = Array.isArray(cfg.enabledGroups) ? (cfg.enabledGroups as string[]) : undefined;
         const hiddenProxyGroupsFromCfg = Array.isArray((cfg as any).hiddenProxyGroups)

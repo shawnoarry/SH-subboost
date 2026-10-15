@@ -1,8 +1,15 @@
 import { existsSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { delimiter, join, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
 
 function findGitBashBin(): string | null {
+  let installedGitBin: string | undefined;
+  try {
+    const execPath = execFileSync("git", ["--exec-path"], { encoding: "utf8", windowsHide: true }).trim();
+    installedGitBin = resolve(execPath, "../../../bin");
+  } catch { /* Fall back to standard installer locations. */ }
   const candidates = [
+    installedGitBin,
     process.env.ProgramFiles && join(process.env.ProgramFiles, "Git", "bin"),
     process.env["ProgramFiles(x86)"] && join(process.env["ProgramFiles(x86)"], "Git", "bin"),
     process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Programs", "Git", "bin"),

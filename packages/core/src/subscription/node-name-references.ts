@@ -1,4 +1,5 @@
 import { buildDefaultUserConfig } from "../config/defaults";
+import { isTemplateType } from "../types/config";
 import type { ParsedNode } from "../types/node";
 import { getValidDialerRelayGroupNames } from "./dialer-relay-group-names";
 
@@ -148,10 +149,7 @@ export function reconcileNodeNameReferences<T extends object>(
   const rawConfig = config as Record<string, unknown>;
   const renameMap = toRenameMap(options.renameMap);
   const availableNames = new Set(options.nodes.map((node) => node.name.trim()).filter(Boolean));
-  const template =
-    rawConfig.template === "minimal" || rawConfig.template === "standard" || rawConfig.template === "full"
-      ? rawConfig.template
-      : "standard";
+  const template = isTemplateType(rawConfig.template) ? rawConfig.template : "standard";
   const validRelayGroupNames = getValidDialerRelayGroupNames(rawConfig, {
     defaultEnabledGroups: buildDefaultUserConfig(template).enabledGroups,
   });

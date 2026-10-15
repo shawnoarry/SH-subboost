@@ -10,6 +10,13 @@ import {
 } from "./persistence";
 
 describe("config store persistence", () => {
+  it("restores the AI split template after a draft reload", () => {
+    const state = { ...structuredClone(initialState), template: "ai-split" as const, enabledProxyGroups: ["select", "openai", "claude", "gemini", "ai-other", "final"] };
+    const restored = normalizePersistedConfigState(JSON.parse(JSON.stringify(partializeConfigState(state))));
+    expect(restored.template).toBe("ai-split");
+    expect(restored.enabledProxyGroups).toEqual(state.enabledProxyGroups);
+  });
+
   it("continues without storage when its getter fails or no browser exists", () => {
     const missing = createSafeConfigDraftStorage(() => null);
     const throwing = createSafeConfigDraftStorage(() => {

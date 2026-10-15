@@ -13,6 +13,7 @@ import {
   DEFAULT_LOAD_BALANCE_STRATEGY,
   isProxyGroupGroupType,
   isLoadBalanceStrategy,
+  isTemplateType,
   type CustomProxyGroup,
   type CustomRule,
   type LoadBalanceStrategy,
@@ -173,7 +174,7 @@ function findRemovedTemplateField(value: Record<string, unknown>): string | null
 }
 
 function parseTemplateType(value: unknown): TemplateType | null {
-  if (value === "minimal" || value === "standard" || value === "full") return value;
+  if (isTemplateType(value)) return value;
   return null;
 }
 

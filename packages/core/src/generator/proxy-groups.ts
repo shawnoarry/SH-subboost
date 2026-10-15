@@ -14,6 +14,7 @@ import type {
   ProxyGroupAdvancedConfig,
   ProxyGroupGroupType,
   RuleProvider,
+  TemplateType,
 } from "@subboost/core/types/config";
 import { resolveProxyGroupMembers } from "@subboost/core/proxy-group-advanced";
 import { isSubscriptionInfoNodeName } from "@subboost/core/subscription/info-node-name";
@@ -111,7 +112,7 @@ const PROXY_GROUP_ORDER: string[] = [
   // 2. 广告拦截
   "ad",
   // 3. 常用服务
-  "ai", "gemini", "youtube", "google", "microsoft", "apple",
+  "openai", "claude", "gemini", "ai", "ai-other", "youtube", "google", "microsoft", "apple",
   // 4. 社交通讯
   "telegram", "twitter", "meta", "discord", "social-other",
   // 5. 流媒体
@@ -544,16 +545,22 @@ export function generateRuleProviders(options: ProxyGroupGenerateOptions): Recor
 /**
  * 根据模板获取启用的模块列表
  */
-export function getModulesForTemplate(template: "minimal" | "standard" | "full"): string[] {
+export function getModulesForTemplate(template: TemplateType): string[] {
   switch (template) {
     case "minimal":
       return ["select", "auto", "ad", "private", "cn", "global", "final"];
     case "standard":
       return ["select", "auto", "ad", "private", "cn", "global", "ai", "youtube", "google", "microsoft", "apple", "github", "telegram", "final"];
+    case "ai-split":
+      return getModulesForTemplate("full").flatMap((id) =>
+        id === "ai" ? ["openai", "claude", "gemini", "ai-other"] : [id]
+      );
     case "full":
     default:
       // 排除默认关闭的模块
-      return PROXY_GROUP_MODULES.filter((m) => m.id !== "adult" && m.id !== "gemini" && m.id !== "google-scholar").map((m) => m.id);
+      return PROXY_GROUP_MODULES.filter((m) =>
+        !["adult", "gemini", "google-scholar", "openai", "claude", "ai-other"].includes(m.id)
+      ).map((m) => m.id);
   }
 }
 

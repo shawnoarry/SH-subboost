@@ -309,7 +309,13 @@ export interface CustomProxyGroup {
 /**
  * 预设模板类型
  */
-export type TemplateType = "minimal" | "standard" | "full";
+export const TEMPLATE_TYPES = ["minimal", "standard", "full", "ai-split"] as const;
+
+export type TemplateType = (typeof TEMPLATE_TYPES)[number];
+
+export function isTemplateType(value: unknown): value is TemplateType {
+  return typeof value === "string" && TEMPLATE_TYPES.some((type) => type === value);
+}
 
 export interface TemplateConfig {
   id: TemplateType;

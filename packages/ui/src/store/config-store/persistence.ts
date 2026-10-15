@@ -1,4 +1,5 @@
 import type { ConfigState } from "./definitions";
+import { isTemplateType } from "@subboost/core/types/config";
 import { safeParseJsonObject } from "@subboost/core/json";
 import { normalizeNodeNameFilterConfig } from "@subboost/core/subscription/node-name-filter";
 import { getConfigDraftStorageNameForUser } from "./draft-storage";
@@ -72,7 +73,7 @@ export function normalizePersistedConfigState(
   const state = (isRecord(persistedState) ? persistedState : {}) as Partial<ConfigState>;
 
   return {
-    ...(state.template === "minimal" || state.template === "standard" || state.template === "full"
+    ...(isTemplateType(state.template)
       ? { template: state.template }
       : {}),
     ...(Array.isArray(state.enabledProxyGroups)

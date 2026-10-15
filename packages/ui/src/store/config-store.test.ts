@@ -167,4 +167,30 @@ describe("useConfigStore", () => {
 
     expect(() => useConfigStore.getState().setDnsYaml("draft")).toThrow("generation failed");
   });
+
+  it("keeps encrypted workspace settings out of local and login draft caches", async () => {
+    const storage = createMemoryStorage();
+    const sessionStorage = createMemoryStorage();
+    const { useConfigStore, setConfigDraftEphemeral } = await loadStore(storage);
+    vi.stubGlobal("window", { localStorage: storage, sessionStorage });
+    const { captureAuthConfigHandoff, AUTH_CONFIG_HANDOFF_STORAGE_NAME } = await import("./config-store/auth-handoff");
+    sessionStorage.setItem(AUTH_CONFIG_HANDOFF_STORAGE_NAME, "old plaintext handoff");
+    useConfigStore.getState().setDnsYaml("old plaintext draft");
+
+    setConfigDraftEphemeral(true);
+    expect(storage.getItem("subboost-config:guest")).toBeNull();
+    expect(sessionStorage.getItem(AUTH_CONFIG_HANDOFF_STORAGE_NAME)).toBeNull();
+    useConfigStore.getState().setDnsYaml("private workspace DNS token");
+    captureAuthConfigHandoff(useConfigStore.getState());
+    expect(storage.getItem("subboost-config:guest")).not.toContain("private workspace");
+    expect(sessionStorage.getItem(AUTH_CONFIG_HANDOFF_STORAGE_NAME)).toBeNull();
+    expect(useConfigStore.getState().dnsYaml).toBe("private workspace DNS token");
+
+    // Account changes replace the workspace and restore normal draft behavior in the new scope.
+    const { setConfigDraftUserScope } = await import("./config-store");
+    setConfigDraftUserScope("other-user");
+    expect(useConfigStore.getState().dnsYaml).not.toContain("private workspace");
+    useConfigStore.getState().setDnsYaml("ordinary new user draft");
+    expect(storage.getItem("subboost-config:user:other-user")).toContain("ordinary new user draft");
+  });
 });

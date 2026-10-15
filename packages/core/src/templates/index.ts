@@ -44,6 +44,15 @@ const FULL_TEMPLATE: TemplateConfig = {
   dns: {},
 };
 
+const AI_SPLIT_TEMPLATE: TemplateConfig = {
+  id: "ai-split",
+  name: "AI 独立分流版",
+  description: "基于完整版，OpenAI / Codex、Claude、Gemini 独立选节点，其他 AI 单独分组",
+  groups: getModulesForTemplate("ai-split"),
+  rules: getModulesForTemplate("ai-split"),
+  dns: {},
+};
+
 /**
  * 所有预设模板
  */
@@ -51,6 +60,7 @@ export const TEMPLATES: Record<TemplateType, TemplateConfig> = {
   minimal: MINIMAL_TEMPLATE,
   standard: STANDARD_TEMPLATE,
   full: FULL_TEMPLATE,
+  "ai-split": AI_SPLIT_TEMPLATE,
 };
 
 /**

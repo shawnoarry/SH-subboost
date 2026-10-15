@@ -90,6 +90,12 @@ describe("auth config handoff", () => {
     delete (globalThis as any).window;
   });
 
+  it("preserves the AI split preset through login handoff", () => {
+    installStorage(createStorage());
+    captureAuthConfigHandoff(meaningfulState({ template: "ai-split", enabledProxyGroups: ["select", "openai", "claude", "gemini", "ai-other", "final"] }));
+    expect(consumeAuthConfigHandoff()).toMatchObject({ template: "ai-split", enabledProxyGroups: ["select", "openai", "claude", "gemini", "ai-other", "final"] });
+  });
+
   it("does nothing when session storage is unavailable", () => {
     expect(hasAuthConfigHandoff()).toBe(false);
     expect(consumeAuthConfigHandoff()).toBeNull();

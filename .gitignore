@@ -13,6 +13,8 @@ local/src/generated/
 !.env.example
 *.pem
 data/
+*.subboost
+private-workspaces/
 .tmp/
 tmp/
 npm-debug.log*

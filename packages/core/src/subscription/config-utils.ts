@@ -6,6 +6,7 @@ import {
   DEFAULT_LOAD_BALANCE_STRATEGY,
   isLoadBalanceStrategy,
   isProxyGroupGroupType,
+  isTemplateType,
   type CustomProxyGroup,
   type CustomRule,
   type GroupListenerBinding,
@@ -49,7 +50,7 @@ function normalizeRuleTarget(value: unknown): ProxyGroupRuleTarget | null {
 }
 
 function normalizeTemplate(value: unknown, fallback: TemplateType = "standard"): TemplateType {
-  if (value === "minimal" || value === "standard" || value === "full") return value;
+  if (isTemplateType(value)) return value;
   return fallback;
 }
 
