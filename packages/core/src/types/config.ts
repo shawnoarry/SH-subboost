@@ -211,7 +211,7 @@ export interface UserConfig {
 
 export interface CustomRule {
   id: string;
-  type: "DOMAIN" | "DOMAIN-SUFFIX" | "DOMAIN-KEYWORD" | "IP-CIDR" | "IP-CIDR6" | "GEOIP" | "GEOSITE" | "PROCESS-NAME" | "DST-PORT" | "SRC-PORT";
+  type: "DOMAIN" | "DOMAIN-SUFFIX" | "DOMAIN-KEYWORD" | "IP-CIDR" | "IP-CIDR6" | "GEOIP" | "GEOSITE" | "PROCESS-NAME" | "DST-PORT" | "SRC-PORT" | "AND";
   value: string;
   target: ProxyGroupRuleTarget;
   noResolve?: boolean;
@@ -263,6 +263,9 @@ export function isProxyGroupGroupType(value: unknown): value is ProxyGroupGroupT
 
 export interface ProxyGroupAdvancedConfig {
   testUrl?: string;
+  testInterval?: number;
+  lazy?: boolean;
+  tolerance?: number;
   sourceIds?: string[];
   regions?: NodeRegion[];
   includeRegex?: string;

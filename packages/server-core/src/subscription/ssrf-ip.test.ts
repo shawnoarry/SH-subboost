@@ -90,6 +90,10 @@ describe("SSRF IP classification", () => {
   it("rechecks only fake-ip DNS answers and selects DoH results conservatively", () => {
     expect(shouldRecheckFakeIpDnsAnswers(["198.18.3.6"])).toBe(true);
     expect(shouldRecheckFakeIpDnsAnswers(["198.18.3.6", "198.19.1.1"])).toBe(true);
+    expect(shouldRecheckFakeIpDnsAnswers(["198.18.3.6", "2001:2::1234"])).toBe(true);
+    expect(isPrivateOrReservedIp("2001:2::1234")).toBe(true);
+    expect(shouldRecheckFakeIpDnsAnswers(["198.18.3.6", "fd00::1"])).toBe(false);
+    expect(selectDnsAddressesAfterFakeIpRecheck(["2001:2::1234"], [])).toEqual(["2001:2::1234"]);
     expect(shouldRecheckFakeIpDnsAnswers(["198.18.3.6", "10.0.0.1"])).toBe(false);
     expect(shouldRecheckFakeIpDnsAnswers(["8.8.8.8"])).toBe(false);
     expect(shouldRecheckFakeIpDnsAnswers([])).toBe(false);

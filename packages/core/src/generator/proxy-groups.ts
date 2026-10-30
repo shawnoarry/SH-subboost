@@ -233,17 +233,23 @@ export function generateProxyGroups(options: ProxyGroupGenerateOptions): ProxyGr
     strategy?: LoadBalanceStrategy,
     extraFields: Record<string, unknown> = providerUse,
     groupTestUrl?: string,
-  ): ProxyGroup =>
-    buildTypedProxyGroup({
-      name,
-      groupType,
-      proxies,
-      testUrl: groupType === "url-test" ? groupTestUrl || testUrl : testUrl,
-      testInterval,
-      strategy,
-      extraFields,
-      urlTestLazy: false,
-    });
+  ): ProxyGroup => {
+    const moduleId = Object.keys(moduleNames).find((id) => moduleNames[id] === name);
+    const advanced = moduleId ? proxyGroupAdvanced[moduleId] : activeCustomProxyGroups.find((group) => group.name === name)?.advanced;
+    return {
+      ...buildTypedProxyGroup({
+        name,
+        groupType,
+        proxies,
+        testUrl: groupType === "url-test" ? groupTestUrl || testUrl : testUrl,
+        testInterval: advanced?.testInterval ?? testInterval,
+        strategy,
+        extraFields,
+        urlTestLazy: advanced?.lazy ?? false,
+      }),
+      ...(groupType === "url-test" && advanced?.tolerance !== undefined ? { tolerance: advanced.tolerance } : {}),
+    };
+  };
 
   // 辅助函数：生成单个代理组
   const generateGroup = (module: ProxyGroupModule) => {

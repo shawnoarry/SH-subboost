@@ -53,6 +53,7 @@ const CUSTOM_RULE_TYPE_LABELS: Record<CustomRule["type"], string> = {
   "PROCESS-NAME": "进程名 (PROCESS-NAME)",
   "DST-PORT": "目标端口 (DST-PORT)",
   "SRC-PORT": "源端口 (SRC-PORT)",
+  AND: "同时满足 (AND)",
 };
 
 const CUSTOM_RULE_TYPE_SHORT_LABELS: Record<CustomRule["type"], string> = {
@@ -66,6 +67,7 @@ const CUSTOM_RULE_TYPE_SHORT_LABELS: Record<CustomRule["type"], string> = {
   "PROCESS-NAME": "进程名",
   "DST-PORT": "目标端口",
   "SRC-PORT": "源端口",
+  AND: "同时满足",
 };
 
 const CUSTOM_RULE_TYPE_OPTIONS = CUSTOM_RULE_TYPES.map((value) => ({

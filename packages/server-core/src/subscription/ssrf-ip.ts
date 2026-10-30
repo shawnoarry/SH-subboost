@@ -198,6 +198,12 @@ export function isPrivateOrReservedIp(hostname: string): boolean {
 export function isBenchmarkReservedIp(hostname: string): boolean {
   const version = isIP(hostname);
   if (version === 4) return isBenchmarkReservedIPv4(hostname);
+  if (version === 6) {
+    const hextets = expandIpv6Hextets(hostname);
+    // RFC 5180 benchmarking space is also used by dual-stack fake-IP DNS.
+    // This only triggers a public DNS recheck; reserved answers remain blocked.
+    return Boolean(hextets && ipv6InCidr(hextets, "2001:2::", 48));
+  }
   return false;
 }
 
