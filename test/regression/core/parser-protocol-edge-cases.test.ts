@@ -54,7 +54,7 @@ describe("public core parser extra branch coverage", () => {
       "public-key": "public",
       "pre-shared-key": "pre",
       mtu: 1420,
-      keepalive: 25,
+      "persistent-keepalive": 25,
       reserved: [1, 2, 3],
       dns: ["1.1.1.1", "2606:4700:4700::1111"],
       "allowed-ips": ["0.0.0.0/0", "::/0"],

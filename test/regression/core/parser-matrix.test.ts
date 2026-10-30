@@ -655,7 +655,7 @@ describe("public core parser branch sweep", () => {
         "_spider-x": "/spider",
       },
     });
-    expect(parseVLESS(`vless://${UUID}@xhttp-min.example.com:443?type=xhttp&headers=${encodeURIComponent('{"bad":1}')}&scMaxEachPostBytes=bad#XMin`)).toMatchObject({
+    expect(parseVLESS(`vless://${UUID}@local.subboost.test:443?type=xhttp&headers=${encodeURIComponent('{"bad":1}')}#XMin`)).toMatchObject({
       name: "XMin",
       network: "xhttp",
       "xhttp-opts": { path: "/" },

@@ -163,7 +163,7 @@ describe("core protocol edge regressions", () => {
   it("keeps Hysteria, Hysteria2, and Trojan optional-list behavior explicit", () => {
     expect(parseHysteria("hy://hy.example.com?auth=secret&fast-open=false&alpn=,,")).toMatchObject({
       "auth-str": "secret",
-      tfo: false,
+      "fast-open": false,
     });
     expect(parseHysteria2("hy2://secret@hy2.example.com:443?obfs=salamander&obfs-password=mask&ports=%20")).toMatchObject({
       password: "secret",

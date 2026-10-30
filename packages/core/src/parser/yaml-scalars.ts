@@ -1,4 +1,5 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
+import { loadMihomoYaml, MIHOMO_YAML_INTEGER_TAG, MIHOMO_YAML_SCHEMA } from "../config/yaml-schema";
 import { MIHOMO_STRING_SCALAR_FIELDS } from "../mihomo/string-scalar";
 
 class YamlInteger extends Number {
@@ -6,15 +7,15 @@ class YamlInteger extends Number {
   constructor(readonly text: string, readonly number: number) { super(number); }
 }
 
-// The bundled schema exposes its scalar types; @types/js-yaml omits that member.
-const standardInteger = (yaml.DEFAULT_SCHEMA as yaml.Schema & { implicit: yaml.Type[] }).implicit
-  .find((type) => (type as yaml.Type & { tag: string }).tag === "tag:yaml.org,2002:int")!;
-const integerType = new yaml.Type("tag:yaml.org,2002:int", {
-  kind: "scalar",
-  resolve: (value: string) => standardInteger.resolve(value),
-  construct: (value: string) => new YamlInteger(value, standardInteger.construct(value)),
+const integerType = yaml.defineScalarTag("tag:yaml.org,2002:int", {
+  ...MIHOMO_YAML_INTEGER_TAG,
+  resolve: (value, isExplicit, tagName) => {
+    const number = MIHOMO_YAML_INTEGER_TAG.resolve(value, isExplicit, tagName);
+    return number === yaml.NOT_RESOLVED ? number : new YamlInteger(value, number);
+  },
+  identify: () => false,
 });
-const scalarSchema = yaml.DEFAULT_SCHEMA.extend({ implicit: [integerType] });
+const scalarSchema = MIHOMO_YAML_SCHEMA.withTags(integerType);
 
 function integerText(text: string): string {
   const plain = text.replace(/_/g, "");
@@ -26,7 +27,7 @@ function integerText(text: string): string {
 }
 
 export function loadSubscriptionYaml(content: string): unknown {
-  const parsed: unknown = yaml.load(content, { schema: scalarSchema });
+  const parsed = loadMihomoYaml(content, scalarSchema);
   const seen = new WeakMap<object, unknown>();
   const normalize = (value: unknown, field = ""): unknown => {
     if (value instanceof YamlInteger) {

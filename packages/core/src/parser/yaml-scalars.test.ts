@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { loadSubscriptionYaml } from "./yaml-scalars";
 
 describe("subscription YAML scalar semantics", () => {
+  it("accepts empty documents and rejects multiple documents", () => {
+    expect(loadSubscriptionYaml("")).toBeUndefined();
+    expect(loadSubscriptionYaml("# no proxies\n")).toBeNull();
+    expect(() => loadSubscriptionYaml("password: 123\n---\npassword: 456"))
+      .toThrow("expected a single document");
+  });
+
   it.each([
     ["0xff", "255"], ["-0xff", "-255"], ["+0o17", "15"],
     ["0b101", "5"], ["+000123", "+000123"], ["-000123", "-000123"],
@@ -12,6 +19,11 @@ describe("subscription YAML scalar semantics", () => {
   it("leaves an unquoted string credential unchanged", () => {
     expect(loadSubscriptionYaml("password: 9_007_199_254_740_993"))
       .toEqual({ password: "9_007_199_254_740_993" });
+  });
+
+  it("preserves merged credentials and numeric mapping keys", () => {
+    expect(loadSubscriptionYaml("<<: &defaults {password: 000123, port: 443}\n123: numeric-key"))
+      .toEqual({ password: "000123", port: 443, "123": "numeric-key" });
   });
 
   it("preserves aliases, cycles, timestamps and binary scalars", () => {

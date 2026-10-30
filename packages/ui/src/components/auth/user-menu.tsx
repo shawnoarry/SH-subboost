@@ -50,6 +50,8 @@ export function UserMenu({
     try {
       if (user) await userLogout();
       setIsOpen(false);
+      // Clear authenticated client caches with a complete page navigation.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/";
     } catch (error) {
       toast({

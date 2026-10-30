@@ -53,6 +53,8 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     await logout();
+    // Clear the mounted authenticated page and its cached state after logout.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/login";
   };
 

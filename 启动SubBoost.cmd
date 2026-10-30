@@ -14,7 +14,7 @@ if exist "%~dp0data\runtime\node\node.exe" (
 )
 where node.exe >nul 2>nul
 if errorlevel 1 (
-  echo Node.js was not found. Install Node.js 22.13+ or 24 and try again.
+  echo Node.js was not found. Install Node.js 24.22.1+ ^(24.x^) or 26.12.1+ ^(26.x^) and try again.
   pause
   exit /b 1
 )

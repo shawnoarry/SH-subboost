@@ -202,7 +202,7 @@ export function isBenchmarkReservedIp(hostname: string): boolean {
     const hextets = expandIpv6Hextets(hostname);
     // RFC 5180 benchmarking space is also used by dual-stack fake-IP DNS.
     // This only triggers a public DNS recheck; reserved answers remain blocked.
-    return Boolean(hextets && ipv6InCidr(hextets, "2001:2::", 48));
+    return hextets !== null && ipv6InCidr(hextets, "2001:2::", 48);
   }
   return false;
 }
