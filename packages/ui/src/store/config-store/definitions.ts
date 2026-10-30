@@ -64,6 +64,7 @@ export interface SubscriptionSource {
   id: string;
   type: SourceType;
   content: string;
+  dnsDependencies?: import("@subboost/core/subscription/source-dns").SourceDnsDependencies;
   name?: string;
   // 上一次成功导入时的输入内容（用于判断是否更换 url 等）
   lastParsedContent?: string;

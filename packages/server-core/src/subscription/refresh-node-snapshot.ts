@@ -1,4 +1,5 @@
 import { parseSubscription } from "@subboost/core/parser";
+import { extractSourceDnsDependencies, refreshSourceDnsDependencies, type SourceDnsDependencies } from "@subboost/core/subscription/source-dns";
 import { stripImportedNodeControlFields } from "@subboost/core/subscription/imported-node-controls";
 import {
   keepOnlyValidNodeSourceIds,
@@ -30,6 +31,7 @@ import { normalizeSavedSourcesForPersistence, type SavedSource, type SavedSource
 type UrlNodeFetchResult = {
   ok: boolean;
   nodes: ParsedNode[];
+  dnsDependencies?: SourceDnsDependencies;
   errors?: string[];
   headers?: Record<string, string>;
   error?: string;
@@ -190,6 +192,17 @@ export async function refreshNodeSnapshot(
     });
   };
 
+  const updateSourceDns = (source: SavedSource, incoming: SourceDnsDependencies | undefined, nodes: ParsedNode[]) => {
+    if (incoming === undefined && source.dnsDependencies === undefined) return;
+    const reset = Boolean(source.lastParsedContent && source.lastParsedContent.trim() !== source.content.trim());
+    const next = refreshSourceDnsDependencies(source.dnsDependencies, incoming, nodes, reset);
+    refreshedSavedSources = refreshedSavedSources.map((item) => {
+      if (item.id !== source.id) return item;
+      const { dnsDependencies: _previous, ...rest } = item;
+      return next ? { ...rest, dnsDependencies: next } : rest;
+    });
+  };
+
   const mergeSourceSubscriptionInfo = (sourceId: string, info: SubscriptionUserInfo | undefined) => {
     updateSourceSubscriptionInfo(sourceId, info);
     const normalized = normalizeSubscriptionUserInfo(info);
@@ -262,6 +275,7 @@ export async function refreshNodeSnapshot(
         continue;
       }
       updateSourceSubscriptionInfo(source.id, resolvedUserInfo);
+      updateSourceDns(source, fetched.dnsDependencies, fetched.nodes);
 
       const parsedNodes = prepareSourceParsedNodes(fetched.nodes, {
         currentTag: source.tag,
@@ -292,6 +306,7 @@ export async function refreshNodeSnapshot(
 
     try {
       const parsed = parseSubscription(source.content);
+      const dnsDependencies = extractSourceDnsDependencies(source.content, parsed.nodes);
       const resolvedUserInfo = resolveSubscriptionUserInfo(undefined, parsed.nodes);
       if (hasSubscriptionUserInfo(resolvedUserInfo)) {
         mergeSubscriptionUserInfo(subscriptionInfo, resolvedUserInfo);
@@ -301,6 +316,7 @@ export async function refreshNodeSnapshot(
         continue;
       }
       updateSourceSubscriptionInfo(source.id, resolvedUserInfo);
+      updateSourceDns(source, dnsDependencies, parsed.nodes);
 
       const parsedNodes = prepareSourceParsedNodes(parsed.nodes, {
         currentTag: source.tag,

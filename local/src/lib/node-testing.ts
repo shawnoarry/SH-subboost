@@ -5,6 +5,9 @@ import http from "node:http";
 import net from "node:net";
 import { randomBytes, randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
+import yaml from "js-yaml";
+import { applySourceDnsDependencies, dnsPatternMatches, type SourceDnsCarrier } from "@subboost/core/subscription/source-dns";
+import { DEFAULT_DNS_CONFIG } from "@subboost/core/generator/dns";
 import { isMihomoSupportedProxyNode, sanitizeMihomoProxyNode } from "@subboost/core/mihomo/proxy-sanitizer";
 import type { ParsedNode } from "@subboost/core/types/node";
 import type { NodeTestJob, NodeTestResult } from "@subboost/core/subscription/maintenance";
@@ -45,11 +48,29 @@ export async function nodeTestEngine() {
 }
 
 /** Never inherit a user's Clash configuration, listeners, controllers, providers or routing. */
-export function isolatedProbeConfig(nodes: ParsedNode[], apiPort: number, secret: string, interfaceName: string) {
+export function isolatedProbeConfig(nodes: ParsedNode[], apiPort: number, secret: string, interfaceName: string, savedConfig?: Record<string, unknown>) {
+  let network: Record<string, unknown> = {};
+  if (savedConfig) {
+    const base = typeof savedConfig.dnsYaml === "string" && savedConfig.dnsYaml.trim() ? yaml.load(savedConfig.dnsYaml) as Record<string, unknown> : {};
+    const merged = applySourceDnsDependencies({ dns: DEFAULT_DNS_CONFIG, ...base }, Array.isArray(savedConfig.sources) ? savedConfig.sources as SourceDnsCarrier[] : [], nodes);
+    const dns = merged.dns as Record<string, unknown>;
+    const scopePolicy = (value: unknown) => value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => nodes.some((node) => typeof node.server === "string" && dnsPatternMatches(key, node.server)))) : {};
+    const { "fake-ip-filter": _filter, "fake-ip-filter-mode": _filterMode, ...rest } = dns;
+    network = {
+      ...(merged.hosts ? { hosts: merged.hosts } : {}),
+      dns: {
+        ...rest, enable: true, listen: "127.0.0.1:0", ipv6: false, "enhanced-mode": "redir-host", "respect-rules": false,
+        "nameserver-policy": scopePolicy(dns["nameserver-policy"]),
+        "proxy-server-nameserver-policy": scopePolicy(dns["proxy-server-nameserver-policy"]),
+        "fallback-filter": { geoip: false },
+      },
+    };
+  }
   return {
     port: 0, "socks-port": 0, "mixed-port": 0, "redir-port": 0, "tproxy-port": 0,
     "allow-lan": false, "bind-address": "127.0.0.1", mode: "rule", ipv6: false,
     "log-level": "silent", tun: { enable: false, "auto-route": false }, dns: { enable: false },
+    ...network,
     "external-controller": `127.0.0.1:${apiPort}`, secret,
     "interface-name": interfaceName, "geo-auto-update": false,
     profile: { "store-selected": false, "store-fake-ip": false },
@@ -94,7 +115,7 @@ async function stopCore(child: ChildProcess) {
   if (child.exitCode === null && child.signalCode === null) { child.kill("SIGKILL"); await exited; }
 }
 
-async function runTests(job: Job, selected: { id: string; node: ParsedNode }[], engine: Awaited<ReturnType<typeof nodeTestEngine>>) {
+async function runTests(job: Job, selected: { id: string; node: ParsedNode }[], engine: Awaited<ReturnType<typeof nodeTestEngine>>, savedConfig?: Record<string, unknown>) {
   const { signal } = job.controller;
   const temporaryRoot = path.resolve(process.env.SUBBOOST_PROJECT_ROOT || path.resolve(process.cwd(), ".."), "data/node-tests");
   let directory: string | undefined, child: ChildProcess | undefined;
@@ -116,7 +137,7 @@ async function runTests(job: Job, selected: { id: string; node: ParsedNode }[], 
     const apiPort = await reserveApiPort(), secret = randomBytes(32).toString("hex");
     const file = path.join(directory, "config.yaml");
     // JSON is a YAML subset. The temporary file is removed after every task, including cancellation.
-    await fs.writeFile(file, JSON.stringify(isolatedProbeConfig(valid.map(({ id, node }) => ({ ...node, name: id })), apiPort, secret, engine.interfaceName!)), { mode: 0o600 });
+    await fs.writeFile(file, JSON.stringify(isolatedProbeConfig(valid.map(({ id, node }) => ({ ...node, name: id })), apiPort, secret, engine.interfaceName!, savedConfig)), { mode: 0o600 });
     child = spawn(engine.executable!, ["-d", directory, "-f", file], { windowsHide: true, stdio: "ignore", env: { ...process.env, HTTP_PROXY: "", HTTPS_PROXY: "", ALL_PROXY: "" } });
     let failed = false;
     child.once("error", () => { failed = true; });
@@ -162,7 +183,7 @@ async function runTests(job: Job, selected: { id: string; node: ParsedNode }[], 
   }
 }
 
-export async function startNodeTests(ownerId: string, subscriptionId: string, nodes: ParsedNode[], nodeIds: unknown): Promise<NodeTestJob> {
+export async function startNodeTests(ownerId: string, subscriptionId: string, nodes: ParsedNode[], nodeIds: unknown, savedConfig?: Record<string, unknown>): Promise<NodeTestJob> {
   if (!Array.isArray(nodeIds) || !nodeIds.length || nodeIds.length > NODE_TEST_BATCH_LIMIT || nodeIds.some((id) => typeof id !== "string" || !/^node-(0|[1-9]\d*)$/.test(id)) || new Set(nodeIds).size !== nodeIds.length) throw new MaintenanceError(`请选择 1–${NODE_TEST_BATCH_LIMIT} 个不同节点`);
   const selected = nodeIds.map((id: string) => ({ id, node: nodes[Number(id.slice(5))] }));
   if (selected.some(({ node }) => !node)) throw new MaintenanceError("所选节点不存在，请刷新列表", 409);
@@ -176,7 +197,7 @@ export async function startNodeTests(ownerId: string, subscriptionId: string, no
   const job: Job = { ownerId, subscriptionId, controller: new AbortController(), expires: Date.now() + 10 * 60_000,
     public: { id, status: "running", createdAt: new Date().toISOString(), testUrl: NODE_TEST_URL, results: selected.map(({ id, node }): NodeTestResult => ({ id, name: node.name, status: "queued" })) } };
   jobs.set(id, job);
-  void runTests(job, selected, engine);
+  void runTests(job, selected, engine, savedConfig);
   return structuredClone(job.public);
 }
 

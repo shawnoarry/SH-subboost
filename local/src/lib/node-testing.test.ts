@@ -3,6 +3,14 @@ import { isolatedProbeConfig, physicalInterfaces, startNodeTests, nodeTestJob } 
 import type { ParsedNode } from "@subboost/core/types/node";
 
 describe("isolated node detection", () => {
+  it("uses the saved source DNS dependency without binding any system DNS port or importing geo rules", () => {
+    const node = { name: "endpoint", type: "trojan", server: "entry.provider.example", port: 443, password: "fixture", _sourceIds: ["source"] } as ParsedNode;
+    const config = isolatedProbeConfig([node], 45678, "secret", "WLAN", { dnsYaml: "dns:\n  nameserver: [223.5.5.5]\n  nameserver-policy:\n    'geosite:cn': [223.5.5.5]\n", sources: [{ id: "source", dnsDependencies: { policies: { "*.provider.example": ["https://dns.provider.example/query"] }, hosts: { "dns.provider.example": ["203.0.113.4"] } } }] });
+    expect(config.dns).toMatchObject({ enable: true, listen: "127.0.0.1:0", "nameserver-policy": { "entry.provider.example": ["https://dns.provider.example/query"] }, "fallback-filter": { geoip: false } });
+    expect((config.dns as Record<string, unknown>)["nameserver-policy"]).not.toHaveProperty("geosite:cn");
+    expect(config.tun.enable).toBe(false);
+    expect(config["mixed-port"]).toBe(0);
+  });
   it("builds a closed isolated core config, independent of running Clash", () => {
     const node = { name: "test", type: "ss", server: "example.com", port: 443, cipher: "aes-128-gcm", password: "secret", "interface-name": "Mihomo", "routing-mark": 20 } as ParsedNode;
     const config = isolatedProbeConfig([node], 45678, "random-secret", "WLAN");

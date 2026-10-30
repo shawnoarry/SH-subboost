@@ -1,7 +1,7 @@
 import { maintenanceNodeList } from "@subboost/core/subscription/maintenance";
 import { withCurrentAdmin } from "./api-auth";
 import { apiError, json, jsonBodyError, LOCAL_JSON_BODY_LIMITS, readJsonBody } from "./http";
-import { applySubscriptionUpdate, checkSubscriptionUpdate, latestUpdatePreview, maintenanceSubscription, maintenanceTestNodes, MaintenanceError, subscriptionVersion } from "./subscription-maintenance";
+import { applySubscriptionUpdate, checkSubscriptionUpdate, latestUpdatePreview, maintenanceSubscription, maintenanceTestContext, MaintenanceError, subscriptionVersion } from "./subscription-maintenance";
 import { readSubscriptionSecrets } from "./subscription-service";
 import { nodeTestEngine, nodeTestJob, startNodeTests } from "./node-testing";
 
@@ -56,8 +56,8 @@ export function maintenancePostResponse(request: Request, id: string) {
       if (body.action === "check") return json({ preview: await checkSubscriptionUpdate(admin.id, id) });
       if (body.action === "apply" && typeof body.previewId === "string") return json(await applySubscriptionUpdate(admin.id, id, body.previewId));
       if (body.action === "start-test" && typeof body.version === "string") {
-        const nodes = await maintenanceTestNodes(admin.id, id, body.version, typeof body.previewId === "string" ? body.previewId : undefined);
-        return json({ job: await startNodeTests(admin.id, id, nodes, body.nodeIds) }, 202);
+        const context = await maintenanceTestContext(admin.id, id, body.version, typeof body.previewId === "string" ? body.previewId : undefined);
+        return json({ job: await startNodeTests(admin.id, id, context.nodes, body.nodeIds, context.config) }, 202);
       }
       if (body.action === "cancel-test" && typeof body.jobId === "string") {
         await maintenanceSubscription(admin.id, id);

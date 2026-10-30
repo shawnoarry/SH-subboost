@@ -25,6 +25,7 @@ import { getValidDialerRelayGroupNames } from "@subboost/core/subscription/diale
 import { reconcileNodeNameReferences } from "@subboost/core/subscription/node-name-references";
 import { tryNormalizeSubscriptionUrlInput } from "@subboost/core/subscription/url-input";
 import type { ConfigActions, SubscriptionSource } from "./definitions";
+import { extractSourceDnsDependencies, refreshSourceDnsDependencies, type SourceDnsDependencies } from "@subboost/core/subscription/source-dns";
 import {
   fetchUrlContentInBrowser,
   getNodeSourceIds,
@@ -309,6 +310,7 @@ export function createSourceActions(set: SetState, get: GetState, setAndGenerate
 
         // 解析内容
         const result = prefetchedParseResult ?? parseSubscription(contentToParse);
+        const dnsDependencies = refreshSourceDnsDependencies(source.dnsDependencies, extractSourceDnsDependencies(contentToParse, result.nodes), result.nodes, treatAsNewSource);
         const resolvedSubscriptionUserInfo = resolveSubscriptionUserInfo(subscriptionUserInfo, result.nodes);
 
         if (result.nodes.length === 0) {
@@ -358,6 +360,7 @@ export function createSourceActions(set: SetState, get: GetState, setAndGenerate
                     parsing: false,
                     parsed: true,
                     nodeCount: result.nodes.length,
+                    dnsDependencies,
                     subscriptionUserInfo: hasSubscriptionUserInfo(resolvedSubscriptionUserInfo)
                       ? resolvedSubscriptionUserInfo
                       : undefined,
@@ -432,6 +435,7 @@ export function createSourceActions(set: SetState, get: GetState, setAndGenerate
           lastParsedContent?: string;
           lastParsedTag?: string;
           lastParsedNameTemplate?: string;
+          dnsDependencies?: SourceDnsDependencies;
         }
       >();
 
@@ -519,6 +523,7 @@ export function createSourceActions(set: SetState, get: GetState, setAndGenerate
 
           // 解析内容
           const result = prefetchedParseResult ?? parseSubscription(contentToParse);
+          const dnsDependencies = refreshSourceDnsDependencies(source.dnsDependencies, extractSourceDnsDependencies(contentToParse, result.nodes), result.nodes, Boolean(source.lastParsedContent && source.lastParsedContent.trim() !== source.content.trim()));
           const resolvedSubscriptionUserInfo = resolveSubscriptionUserInfo(subscriptionUserInfo, result.nodes);
           const currentTag = typeof source.tag === "string" ? source.tag.trim() : "";
           const currentNameTemplate = typeof source.nameTemplate === "string" ? source.nameTemplate.trim() : "";
@@ -540,6 +545,7 @@ export function createSourceActions(set: SetState, get: GetState, setAndGenerate
           sourceMeta.set(source.id, {
             parsed: true,
             nodeCount: result.nodes.length,
+            dnsDependencies,
             subscriptionUserInfo: hasSubscriptionUserInfo(resolvedSubscriptionUserInfo)
               ? resolvedSubscriptionUserInfo
               : undefined,
@@ -673,6 +679,7 @@ export function createSourceActions(set: SetState, get: GetState, setAndGenerate
               parsed: meta.parsed,
               parsing: false,
               ...(typeof meta.nodeCount === "number" ? { nodeCount: meta.nodeCount } : {}),
+              ...(meta.parsed ? { dnsDependencies: meta.dnsDependencies } : {}),
               ...(meta.subscriptionUserInfo ? { subscriptionUserInfo: meta.subscriptionUserInfo } : { subscriptionUserInfo: undefined }),
               ...(meta.error ? { error: meta.error } : { error: undefined }),
               ...(meta.errorInfo ? { errorInfo: meta.errorInfo } : { errorInfo: undefined }),

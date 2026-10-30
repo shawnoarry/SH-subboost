@@ -6,7 +6,7 @@ export type MaintenanceNode = { id: string; name: string; type: string; source: 
 export type UpdatePreview = {
   id: string; baseVersion: string; checkedAt: string; expiresAt: string;
   beforeCount: number; afterCount: number; changes: NodeChange[]; unchangedCount: number;
-  sources: { name: string; status: "updated" | "failed" | "delegated"; message?: string }[];
+  sources: { name: string; status: "updated" | "failed" | "delegated"; message?: string; dnsChanged?: boolean }[];
   canApply: boolean; message?: string; nodes: MaintenanceNode[];
 };
 export type NodeTestStatus = "queued" | "testing" | "available" | "timeout" | "failed" | "unsupported" | "cancelled";

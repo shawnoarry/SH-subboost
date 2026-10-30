@@ -323,6 +323,7 @@ export function buildSubscriptionFetchCallbacks() {
         return {
           ok: true,
           nodes: imported.parsedNodes,
+          ...(imported.dnsDependencies ? { dnsDependencies: imported.dnsDependencies } : {}),
           errors: imported.parseErrors,
           headers: imported.headers,
         };

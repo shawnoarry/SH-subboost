@@ -21,6 +21,7 @@ import {
   type NodeNameFilterConfig,
 } from "@subboost/core/subscription/node-name-filter";
 import { useConfigStore } from "@subboost/ui/store/config-store";
+import { normalizeSourceDnsDependencies, type SourceDnsDependencies } from "@subboost/core/subscription/source-dns";
 import { initialState } from "@subboost/ui/store/config-store/definitions";
 import { captureAuthConfigHandoff } from "@subboost/ui/store/config-store/auth-handoff";
 import { toast } from "@subboost/ui/components/ui/toaster";
@@ -184,6 +185,7 @@ export function useEditingSubscriptionLoader({
               return {
                 id: typeof id === "string" && id.trim() ? id.trim() : undefined,
                 type: t as "url" | "yaml" | "nodes",
+                dnsDependencies: normalizeSourceDnsDependencies((item as Record<string, unknown>).dnsDependencies),
                 content: normalizedContent,
                 lastParsedContent:
                   typeof lastParsedContent === "string" && lastParsedContent.trim()
@@ -212,6 +214,7 @@ export function useEditingSubscriptionLoader({
             .filter(Boolean) as Array<{
               id?: string;
               type: "url" | "yaml" | "nodes";
+              dnsDependencies?: SourceDnsDependencies;
               content: string;
               lastParsedContent?: string;
               tag?: string;
@@ -278,6 +281,7 @@ export function useEditingSubscriptionLoader({
             return {
               id: finalId,
               type: s.type,
+              ...(s.dnsDependencies ? { dnsDependencies: s.dnsDependencies } : {}),
               content: s.type === "url" ? (tryNormalizeSubscriptionUrlInput(s.content) ?? s.content.trim()) : s.content,
               ...(lastParsedContent ? { lastParsedContent } : {}),
               ...(typeof s.tag === "string" && s.tag.trim() ? { tag: s.tag.trim() } : {}),

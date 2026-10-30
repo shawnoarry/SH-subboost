@@ -38,9 +38,11 @@ import { isMihomoSupportedProxyNode, normalizeMihomoVlessForGeneration } from ".
 import { getValidDialerRelayGroupNames } from "../subscription/dialer-relay-group-names";
 import { chooseFallbackPolicyTarget, withBuiltinPolicyTargets } from "./policy-targets";
 import { resolveGroupListenerEntries, type GroupListenerTargetResolution } from "./group-listeners";
+import { applySourceDnsDependencies, type SourceDnsCarrier } from "../subscription/source-dns";
 
 export interface GenerateOptions {
   nodes: ParsedNode[];
+  sources?: readonly SourceDnsCarrier[];
   proxyProviders?: Record<string, unknown>;
   template?: TemplateType;
   userConfig?: Partial<UserConfig>;
@@ -590,7 +592,7 @@ export function generateClashConfig(options: GenerateOptions): ClashConfig {
     }),
   };
 
-  return clashConfig as unknown as ClashConfig;
+  return applySourceDnsDependencies(clashConfig, options.sources ?? [], outputNodes) as unknown as ClashConfig;
 }
 
 /**

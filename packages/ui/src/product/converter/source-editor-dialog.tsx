@@ -36,6 +36,7 @@ export function SourceEditorDialog({
 
         {source ? (
           <div className="space-y-3">
+            {source.dnsDependencies && (Object.keys(source.dnsDependencies.policies).length > 0 || Object.keys(source.dnsDependencies.hosts).length > 0) && <p className="rounded-lg border border-ink/10 bg-ink/5 p-3 text-xs text-fg-60">已保留此来源节点所需的 DNS 解析设置及配套 hosts，将用于配置生成和节点检测，并随加密工作配置保存。</p>}
             <div className="grid gap-3 sm:grid-cols-3">
               <FormField label="标签（tag）">
                 <Input

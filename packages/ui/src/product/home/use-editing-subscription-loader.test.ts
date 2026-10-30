@@ -333,6 +333,17 @@ describe("useEditingSubscriptionLoader", () => {
     expect(options.setCopied).toHaveBeenCalledWith(false);
   });
 
+  it("restores persisted source DNS dependencies when reopening the editor", async () => {
+    const dnsDependencies = { policies: { "*.provider.example": ["https://dns.provider.example/query"] }, hosts: { "dns.provider.example": ["203.0.113.4"] } };
+    const options = makeOptions({ loadSubscription: vi.fn(async () => response(200, { subscription: {
+      id: "sub-1", token: "fixture", name: "Saved", urls: ["https://provider.example/sub"],
+      nodes: [node("Remote", { _sourceIds: ["s1"] })], config: { sources: [{ id: "s1", type: "url", content: "https://provider.example/sub", dnsDependencies }] },
+    } })) });
+    useEditingSubscriptionLoader(options);
+    await flushAsync();
+    expect(options.setStoreSources).toHaveBeenCalledWith([expect.objectContaining({ id: "s1", dnsDependencies })]);
+  });
+
   it("falls back to URL sources when config sources are absent", async () => {
     const options = makeOptions({
       loadSubscription: vi.fn(async () =>

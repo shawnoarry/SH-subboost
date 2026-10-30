@@ -135,7 +135,12 @@ export function normalizeSubscriptionConfigForPersistence(
         : { ...existingConfig, ...submittedConfig };
 
   if ("sources" in baseConfig || options.fallbackUrls) {
-    const sources = normalizeSavedSourcesForPersistence(baseConfig.sources, options);
+    const previousSources = normalizeSavedSourcesForPersistence(existingConfig.sources);
+    const sources = normalizeSavedSourcesForPersistence(baseConfig.sources, options).map((source) => {
+      if (source.dnsDependencies) return source;
+      const previous = previousSources.find((item) => item.id === source.id && item.type === source.type && item.content === source.content);
+      return previous?.dnsDependencies ? { ...source, dnsDependencies: previous.dnsDependencies } : source;
+    });
     if (sources.length > 0) {
       baseConfig.sources = sources;
     } else {

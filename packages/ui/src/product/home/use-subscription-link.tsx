@@ -340,6 +340,7 @@ export function useSubscriptionLink({
                 return {
                   id: s.id,
                   type: s.type,
+                  ...(s.dnsDependencies ? { dnsDependencies: s.dnsDependencies } : {}),
                   content:
                     s.type === "url"
                       ? (tryNormalizeSubscriptionUrlInput(s.content) ?? s.content.trim())

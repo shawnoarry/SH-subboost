@@ -2,6 +2,7 @@ import { getNodeEndpointError } from "@subboost/core/node-endpoint";
 import { parseNodeNameFilterConfig } from "@subboost/core/subscription/node-name-filter";
 import { SUBBOOST_TEMPLATE_CONFIG_SCHEMA, validateSubBoostTemplateConfig } from "@subboost/core/templates/config-template";
 import type { ConfigState } from "@subboost/ui/store/config-store/definitions";
+import { normalizeSourceDnsDependencies } from "@subboost/core/subscription/source-dns";
 
 export const MAX_WORKSPACE_BYTES = 16 * 1024 * 1024;
 const MAX_ITEMS = 10000;
@@ -98,6 +99,7 @@ export function validateWorkspaceSnapshot(value: unknown): WorkspaceSnapshot {
     for (const field of ["useProxyProviders", "parsed"]) requireValue(source[field] === undefined || typeof source[field] === "boolean", "订阅源状态无效");
     requireValue(source.nodeCount === undefined || (typeof source.nodeCount === "number" && Number.isInteger(source.nodeCount) && source.nodeCount >= 0), "订阅源节点数无效");
     requireValue(source.subscriptionUserInfo === undefined || record(source.subscriptionUserInfo), "订阅流量信息无效");
+    requireValue(source.dnsDependencies === undefined || normalizeSourceDnsDependencies(source.dnsDependencies) !== undefined, "订阅源 DNS 依赖无效");
     for (const field of ["content", "userinfoUrl"]) {
       if ((field === "content" && source.type !== "url") || !source[field]) continue;
       let url: URL;
@@ -126,7 +128,7 @@ export function validateWorkspaceSnapshot(value: unknown): WorkspaceSnapshot {
   }
   const out = Object.fromEntries(FIELDS.map((field) => [field, value[field]])) as WorkspaceSnapshot;
   const { schema: _schema, ...settings } = template.config;
-  return captureWorkspace({ ...out, ...settings, nodeNameFilter, sources: out.sources.map((source) => ({ ...source, parsing: false })) } as ConfigState);
+  return captureWorkspace({ ...out, ...settings, nodeNameFilter, sources: out.sources.map((source) => ({ ...source, ...(source.dnsDependencies ? { dnsDependencies: normalizeSourceDnsDependencies(source.dnsDependencies) } : {}), parsing: false })) } as ConfigState);
 }
 
 export function validateWorkspaceDocument(value: unknown): WorkspaceDocument {

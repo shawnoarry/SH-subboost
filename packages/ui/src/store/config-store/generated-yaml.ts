@@ -57,6 +57,7 @@ function buildGenerateClashYamlOptions(
 ): GenerateClashYamlOptions {
   return {
     nodes: stripImportedNodeControlFieldsFromList(effectiveNodes),
+    sources: state.sources,
     proxyProviders,
     template: state.template,
     userConfig: {

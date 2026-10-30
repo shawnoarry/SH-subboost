@@ -1,4 +1,5 @@
 import { parseSubscription } from "@subboost/core/parser";
+import { extractSourceDnsDependencies, type SourceDnsDependencies } from "@subboost/core/subscription/source-dns";
 import {
   hasClientUpdatePlaceholderError,
   looksLikeClientUpdatePlaceholderNodes,
@@ -43,6 +44,7 @@ export type SourceImportRequest = {
 
 export type SourceImportSuccess = {
   ok: true;
+  dnsDependencies?: SourceDnsDependencies;
   content: string;
   headers: Record<string, string>;
   parsedNodes: ParsedNode[];
@@ -80,6 +82,7 @@ type ParsedAttempt =
       content: string;
       headers: Record<string, string>;
       parsed: ParseResult;
+      dnsDependencies?: SourceDnsDependencies;
     }
   | {
       ok: false;
@@ -148,6 +151,10 @@ function pickBetterAttempt(current: ParsedAttempt | null, next: ParsedAttempt, d
   if (currentUsable !== nextUsable) return nextUsable ? next : current;
   if (current.ok !== next.ok) return next.ok ? next : current;
   if (!current.ok || !next.ok) return current;
+  if (comparison?.relation === "equivalent" && next.parsed.errors.length <= current.parsed.errors.length) {
+    const richness = (value: SourceDnsDependencies | undefined) => value ? Object.keys(value.policies).length + Object.keys(value.hosts).length : 0;
+    if (richness(next.dnsDependencies) > richness(current.dnsDependencies)) return next;
+  }
   return comparison?.selected === "next" ? next : current;
 }
 
@@ -194,12 +201,14 @@ async function fetchAndParseWithUserAgent(
     };
   }
 
+  const parsed = parseSubscription(response.content);
   return {
     ok: true,
     userAgent,
     content: response.content,
     headers: normalizeHeaders(response.headers),
-    parsed: parseSubscription(response.content),
+    parsed,
+    dnsDependencies: extractSourceDnsDependencies(response.content, parsed.nodes),
   };
 }
 
@@ -292,6 +301,7 @@ export async function importSubscriptionFromUrl(
     content: best.content,
     headers: { ...best.headers, ...supplementalHeaders },
     parsedNodes: best.parsed.nodes,
+    ...(best.dnsDependencies ? { dnsDependencies: best.dnsDependencies } : {}),
     parseErrors: best.parsed.errors,
     diagnostics,
   };

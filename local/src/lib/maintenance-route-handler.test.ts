@@ -6,7 +6,7 @@ vi.mock("./api-auth", () => ({ withCurrentAdmin: mocks.guard }));
 vi.mock("./subscription-service", () => ({ readSubscriptionSecrets: () => ({ nodes: [], config: {} }) }));
 vi.mock("./subscription-maintenance", () => ({
   maintenanceSubscription: mocks.subscription, checkSubscriptionUpdate: mocks.check, applySubscriptionUpdate: mocks.apply,
-  maintenanceTestNodes: mocks.nodes, latestUpdatePreview: () => undefined, subscriptionVersion: () => "version",
+  maintenanceTestContext: mocks.nodes, latestUpdatePreview: () => undefined, subscriptionVersion: () => "version",
   MaintenanceError: class extends Error { constructor(message: string, public status: number) { super(message); } },
 }));
 vi.mock("./node-testing", () => ({ nodeTestEngine: async () => ({ executable: "private-local-path", available: true, interfaceName: "WLAN" }), startNodeTests: mocks.start, nodeTestJob: mocks.job }));
@@ -41,6 +41,15 @@ describe("maintenance API access boundaries", () => {
     expect((await maintenancePostResponse(request({ action: "apply", ownerId: "other", previewId: "preview" }), "sub")).status).toBe(200);
     expect(mocks.apply).toHaveBeenCalledWith("owner", "sub", "preview");
     expect((await maintenancePostResponse(request({ action: "apply" }), "sub")).status).toBe(400);
+  });
+  it("passes the saved DNS context to isolated tests without returning it to the client", async () => {
+    const config = { sources: [{ id: "source", dnsDependencies: { policies: { "*.provider.example": ["https://dns.provider.example/query?key=fixture-only"] }, hosts: {} } }] };
+    mocks.nodes.mockResolvedValue({ nodes: [], config });
+    mocks.start.mockResolvedValue({ id: "job", status: "running", results: [] });
+    const response = await maintenancePostResponse(request({ action: "start-test", version: "v1", nodeIds: ["node-0"] }), "sub");
+    expect(response.status).toBe(202);
+    expect(mocks.start).toHaveBeenCalledWith("owner", "sub", [], ["node-0"], config);
+    expect(await response.text()).not.toContain("fixture-only");
   });
   it("omits private executable paths and sanitizes unexpected upstream exceptions", async () => {
     const response = await maintenanceGetResponse(new Request("http://localhost/"), "sub");

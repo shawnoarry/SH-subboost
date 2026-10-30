@@ -28,6 +28,16 @@ function fixture(): ConfigState {
 }
 
 describe("portable workspace data", () => {
+  it("carries source DNS dependencies through encrypted export/import and configuration generation", async () => {
+    const state = fixture();
+    state.sources[0].dnsDependencies = { policies: { "*.example.com": ["https://resolver.example.com/query"] }, hosts: { "resolver.example.com": ["203.0.113.4"] } };
+    const document = nextWorkspace(captureWorkspace(state), "DNS fixture");
+    const encrypted = await encryptWorkspace(document, password);
+    const loaded = await decryptWorkspace(encrypted, password);
+    expect(loaded.state.sources[0].dnsDependencies).toEqual(state.sources[0].dnsDependencies);
+    expect(computeGeneratedYamlResult({ ...state, ...loaded.state }).yaml).toContain("https://resolver.example.com/query");
+    expect(encrypted).not.toContain("resolver.example.com");
+  });
   it("preserves nodes, original identity, deleted-node restoration data, sources, routing, DNS and listeners", () => {
     const original = fixture();
     const snapshot = validateWorkspaceSnapshot(captureWorkspace(original));

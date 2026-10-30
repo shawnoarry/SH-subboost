@@ -1,4 +1,5 @@
 import { tryNormalizeSubscriptionUrlInput } from "@subboost/core/subscription/url-input";
+import { normalizeSourceDnsDependencies, type SourceDnsDependencies } from "@subboost/core/subscription/source-dns";
 import {
   hasSubscriptionUserInfo,
   normalizeSubscriptionUserInfo,
@@ -11,6 +12,7 @@ export type SavedSource = {
   id: string;
   type: SavedSourceType;
   content: string;
+  dnsDependencies?: SourceDnsDependencies;
   useProxyProviders?: boolean;
   userinfoUrl?: string;
   userinfoUserAgent?: string;
@@ -85,11 +87,13 @@ export function normalizeSavedSourcesForPersistence(
     const lastParsedContent = toTrimmedString(record.lastParsedContent);
     const lastParsedTag = toTrimmedString(record.lastParsedTag);
     const lastParsedNameTemplate = toTrimmedString(record.lastParsedNameTemplate);
+    const dnsDependencies = normalizeSourceDnsDependencies(record.dnsDependencies);
 
     return {
       id: nextId(preferredId),
       type,
       content: type === "url" ? normalizeUrlContent(content) : content,
+      ...(dnsDependencies ? { dnsDependencies } : {}),
       ...(type === "url" && record.useProxyProviders === true ? { useProxyProviders: true } : {}),
       ...(type === "url" && userinfoUrl ? { userinfoUrl: normalizeUrlContent(userinfoUrl) } : {}),
       ...(type === "url" && userinfoUserAgent ? { userinfoUserAgent } : {}),

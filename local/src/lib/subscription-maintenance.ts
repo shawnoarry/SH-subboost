@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { compareMaintenanceNodes, maintenanceNodeList, type UpdatePreview } from "@subboost/core/subscription/maintenance";
 import { refreshNodeSnapshot, prepareRefreshCacheResult } from "@subboost/server-core/subscription";
 import type { ParsedNode } from "@subboost/core/types/node";
+import { stableJsonStringify } from "@subboost/core/node-identity";
 import { prisma } from "./prisma";
 import { encryptJson, decryptJson } from "./crypto";
 import { buildSubscriptionFetchCallbacks, MAX_NODES_PER_SUBSCRIPTION, persistRefreshSuccess, readSubscriptionSecrets, type SubscriptionRow } from "./subscription-service";
@@ -57,6 +58,7 @@ export async function checkSubscriptionUpdate(ownerId: string, id: string): Prom
       beforeCount: secrets.nodes.length, afterCount: snapshot.nodes.length, ...compareMaintenanceNodes(secrets.nodes, snapshot.nodes),
       sources: snapshot.savedSources.map((source, index) => ({
         name: source.tag || `订阅源 ${index + 1}`,
+        dnsChanged: stableJsonStringify(source.dnsDependencies) !== stableJsonStringify((Array.isArray(secrets.config.sources) ? secrets.config.sources : []).find((old) => old.id === source.id)?.dnsDependencies),
         status: failed.has(source.id) ? "failed" as const : source.useProxyProviders ? "delegated" as const : "updated" as const,
         message: failed.has(source.id) ? "获取失败，本次保留该源原有节点" : source.useProxyProviders ? "由 Clash 管理的订阅源，不在这里展开节点" : undefined,
       })),
@@ -95,13 +97,19 @@ export async function applySubscriptionUpdate(ownerId: string, id: string, previ
   } finally { entry.applying = false; }
 }
 
-export async function maintenanceTestNodes(ownerId: string, id: string, version: string, previewId?: string): Promise<ParsedNode[]> {
+export async function maintenanceTestContext(ownerId: string, id: string, version: string, previewId?: string): Promise<{ nodes: ParsedNode[]; config: Record<string, unknown> }> {
   const row = await maintenanceSubscription(ownerId, id);
   if (previewId) {
     const entry = pendingPreview(ownerId, id, previewId);
     if (subscriptionVersion(row) !== entry.version || version !== entry.version) throw new MaintenanceError("预览已失效，请重新检查", 409);
-    return decryptJson<{ snapshot: { nodes: ParsedNode[] } }>(entry.encrypted, undefined as never).snapshot.nodes;
+    const payload = decryptJson<{ snapshot: { nodes: ParsedNode[] }; config: Record<string, unknown> }>(entry.encrypted, undefined as never);
+    return { nodes: payload.snapshot.nodes, config: payload.config };
   }
   if (subscriptionVersion(row) !== version) throw new MaintenanceError("节点列表已变化，请重新加载后检测", 409);
-  return readSubscriptionSecrets(row).nodes;
+  const secrets = readSubscriptionSecrets(row);
+  return { nodes: secrets.nodes, config: secrets.config };
+}
+
+export async function maintenanceTestNodes(ownerId: string, id: string, version: string, previewId?: string): Promise<ParsedNode[]> {
+  return (await maintenanceTestContext(ownerId, id, version, previewId)).nodes;
 }

@@ -22,6 +22,7 @@ import { DEFAULT_SUBBOOST_CONFIG } from "@subboost/core/config/defaults";
 import { normalizeRuleModelFromConfig } from "@subboost/core/rules/rule-model";
 import { normalizeProxyGroupAdvancedConfig } from "@subboost/core/proxy-group-advanced";
 import { normalizeProxyGroupTargetRef } from "@subboost/core/proxy-group-targets";
+import type { SourceDnsCarrier } from "./source-dns";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -353,6 +354,7 @@ export function buildGenerateOptionsFromConfig(
 
   return {
     nodes: sanitizedNodes,
+    ...(Array.isArray(config.sources) ? { sources: config.sources as SourceDnsCarrier[] } : {}),
     ...(proxyProviders ? { proxyProviders } : {}),
     template,
     userConfig,
