@@ -24,6 +24,7 @@ const localDashboardAdapter: DashboardSurfaceAdapter = {
   settingsHref: "/dashboard/settings",
   settingsDescription: "查看本地管理员和运行状态",
   autoUpdateIntervalPolicy: LOCAL_AUTO_UPDATE_POLICY,
+  maintenanceHref: (subscription) => `/dashboard/subscriptions/${encodeURIComponent(subscription.id)}/maintenance`,
   fetchSubscriptions: async () => {
     const response = await fetch("/api/subscriptions");
     const data = await readJsonResponse<{ subscriptions?: Subscription[]; error?: string }>(response, "获取订阅失败");

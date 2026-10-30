@@ -4,6 +4,9 @@ import path from "node:path";
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.resolve(process.cwd(), ".."),
+  outputFileTracingExcludes: {
+    "/*": ["../data/**/*", "../private-workspaces/**/*", "../.tmp/**/*", ".env", ".env.*"],
+  },
   transpilePackages: ["@subboost/core", "@subboost/server-core", "@subboost/ui", "@subboost/config"],
   webpack(config) {
     config.resolve.alias["@"] = path.resolve(process.cwd(), "src");

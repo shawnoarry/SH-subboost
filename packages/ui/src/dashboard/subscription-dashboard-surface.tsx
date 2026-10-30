@@ -59,6 +59,7 @@ export type DashboardSurfaceAdapter = {
   settingsDescription?: string;
   autoUpdateIntervalPolicy?: AutoUpdateIntervalPolicyOverride;
   editSubscriptionHref?: (subscription: Subscription) => string;
+  maintenanceHref?: (subscription: Subscription) => string;
   fetchSubscriptions: () => Promise<Subscription[]>;
   deleteSubscription: (id: string) => Promise<void>;
   refreshSubscription: (id: string) => Promise<RefreshSubscriptionResponse>;
@@ -370,6 +371,7 @@ export function SubscriptionDashboardSurface({ adapter }: Props) {
                   copiedId={copiedId}
                   refreshingId={refreshingId}
                   editHref={editSubscriptionHref(sub)}
+                  maintenanceHref={adapter.maintenanceHref?.(sub)}
                   onCopy={copyToClipboard}
                   onDelete={deleteSubscription}
                   onDownload={downloadSubscription}
@@ -462,6 +464,7 @@ function SubscriptionRow({
   copiedId,
   refreshingId,
   editHref,
+  maintenanceHref,
   onCopy,
   onDelete,
   onDownload,
@@ -472,6 +475,7 @@ function SubscriptionRow({
   copiedId: string | null;
   refreshingId: string | null;
   editHref: string;
+  maintenanceHref?: string;
   onCopy: (subscriptionUrl: string, id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onDownload: (sub: Subscription) => Promise<void>;
@@ -539,7 +543,7 @@ function SubscriptionRow({
           <MoreVertical className="h-4 w-4" />
           <span className="hidden sm:inline">设置</span>
         </Button>
-        <Button
+        {maintenanceHref ? <Button asChild variant="outline" size="sm"><Link href={maintenanceHref}>更新与检测</Link></Button> : <Button
           variant="ghost"
           size="sm"
           onClick={() => void onRefresh(sub.id)}
@@ -549,7 +553,7 @@ function SubscriptionRow({
         >
           <RefreshCw className={`h-4 w-4 ${refreshingId === sub.id ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">刷新</span>
-        </Button>
+        </Button>}
         <Button
           variant="ghost"
           size="sm"

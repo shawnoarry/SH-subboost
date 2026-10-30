@@ -52,6 +52,7 @@ function syncDirectory(source, target) {
 }
 
 async function main() {
+  process.env.SUBBOOST_PROJECT_ROOT ||= path.resolve(appRoot, "..");
   const serverPath = findStandaloneServer();
   const standaloneRoot = path.dirname(serverPath);
   assertBuilt(serverPath);

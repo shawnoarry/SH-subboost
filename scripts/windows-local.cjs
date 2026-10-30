@@ -129,7 +129,7 @@ async function main(args = process.argv.slice(2)) {
   const base = `http://127.0.0.1:${config.port}`;
   const envFile = path.join(ROOT, "local", ".env");
   if (!fs.existsSync(envFile)) throw new Error("缺少 local/.env。本入口只启动已安装好的本地实例，不会创建或覆盖数据库。");
-  const env = { ...process.env, ...parse(fs.readFileSync(envFile)), HOSTNAME: "127.0.0.1", PORT: String(config.port), NEXT_TELEMETRY_DISABLED: "1" };
+  const env = { ...process.env, ...parse(fs.readFileSync(envFile)), SUBBOOST_PROJECT_ROOT: ROOT, HOSTNAME: "127.0.0.1", PORT: String(config.port), NEXT_TELEMETRY_DISABLED: "1" };
   const show = async (auth) => {
     console.log(`SubBoost 已就绪：${base}/`);
     if (config.browser) {

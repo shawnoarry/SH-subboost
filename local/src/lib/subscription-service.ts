@@ -346,16 +346,17 @@ export function buildSubscriptionCacheExpiry(from: Date): Date {
   return new Date(from.getTime() + CACHE_TTL_SECONDS * 1000);
 }
 
-async function persistRefreshSuccess(params: {
+export async function persistRefreshSuccess(params: {
   subscriptionId: string;
   expectedUpdatedAt: Date;
+  expectedEncryptedState?: Pick<SubscriptionRow, "encryptedConfig" | "encryptedNodes" | "encryptedUrls">;
   snapshot: RefreshNodeSnapshotResult;
   config: Record<string, unknown>;
   cachedAt: Date;
 }): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     const updated = await tx.subscription.updateMany({
-      where: { id: params.subscriptionId, updatedAt: params.expectedUpdatedAt },
+      where: { id: params.subscriptionId, updatedAt: params.expectedUpdatedAt, ...params.expectedEncryptedState },
       data: {
         encryptedNodes: encryptJson(params.snapshot.nodes),
         encryptedConfig: encryptJson(params.config),
