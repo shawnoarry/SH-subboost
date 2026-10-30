@@ -28,6 +28,24 @@ function fixture(): ConfigState {
 }
 
 describe("portable workspace data", () => {
+  it("validates relay nodes, optional source metadata and deleted-node/listener relationships", () => {
+    const snapshot = captureWorkspace(fixture());
+    const relay = { name: "relay", type: "relay", proxies: ["日本-保留"], _originName: "old-relay" };
+    expect(validateWorkspaceSnapshot({ ...snapshot, nodes: [...snapshot.nodes, relay] }).nodes).toHaveLength(2);
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, nodes: [{ ...relay, proxies: [] }] })).toThrow("中转节点");
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, nodes: [{ ...relay, _originName: 12 }] })).toThrow("节点原名");
+    const source = { id: "plain", type: "nodes", content: "", nodeCount: 0, subscriptionUserInfo: {}, useProxyProviders: false, userinfoUrl: "https://info.example/" };
+    expect(validateWorkspaceSnapshot({ ...snapshot, sources: [source] }).sources[0].nodeCount).toBe(0);
+    for (const nodeCount of [-1, 1.5, "bad"]) expect(() => validateWorkspaceSnapshot({ ...snapshot, sources: [{ ...source, nodeCount }] })).toThrow("节点数");
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, sources: [{ ...source, userinfoUrl: "malformed" }] })).toThrow("无效订阅链接");
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, sources: [{ ...source, userinfoUrl: "https://user@info.example/" }] })).toThrow("内嵌账号密码");
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, sources: [{ ...source, userinfoUrl: "https://:pass@info.example/" }] })).toThrow("内嵌账号密码");
+    expect(validateWorkspaceSnapshot({ ...snapshot, deletedNodes: [{ name: "deleted", originName: "deleted" }] }).deletedNodes).toHaveLength(1);
+    const listener = { id: "l", port: 12001, target: { kind: "module", id: "select" }, enabled: true, allowLan: false };
+    expect(validateWorkspaceSnapshot({ ...snapshot, groupListeners: [listener] }).groupListeners).toHaveLength(1);
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, groupListeners: [{ ...listener, enabled: "yes" }] })).toThrow("分组监听开关");
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, groupListeners: [{ ...listener, target: { kind: "unknown", id: "x" } }] })).toThrow("分组监听设置");
+  });
   it("carries source DNS dependencies through encrypted export/import and configuration generation", async () => {
     const state = fixture();
     state.sources[0].dnsDependencies = { policies: { "*.example.com": ["https://resolver.example.com/query"] }, hosts: { "resolver.example.com": ["203.0.113.4"] } };
@@ -63,6 +81,7 @@ describe("portable workspace data", () => {
 
   it("rejects malformed state before it can replace the editor", () => {
     const snapshot = captureWorkspace(fixture());
+    expect(() => validateWorkspaceSnapshot({ ...snapshot, mixedPort: 0 })).toThrow("生成设置无效");
     expect(() => validateWorkspaceSnapshot({ ...snapshot, nodes: [{ name: "bad", type: "ss", server: "host", port: -1 }] })).toThrow();
     expect(() => validateWorkspaceSnapshot({ ...snapshot, sources: [{ id: "s", type: "url", content: "javascript:alert(1)" }] })).toThrow();
     expect(() => validateWorkspaceSnapshot({ ...snapshot, listenerPorts: { bad: 70000 } })).toThrow();

@@ -1,20 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { applySubscriptionUpdate, checkSubscriptionUpdate, maintenanceTestNodes, subscriptionVersion } from "./subscription-maintenance";
+import { applySubscriptionUpdate, checkSubscriptionUpdate, latestUpdatePreview, maintenanceSubscription, maintenanceTestNodes, subscriptionVersion } from "./subscription-maintenance";
 
-const mocks = vi.hoisted(() => ({ findFirst: vi.fn(), refresh: vi.fn(), prepare: vi.fn(), persist: vi.fn() }));
+const mocks = vi.hoisted(() => ({ findFirst: vi.fn(), refresh: vi.fn(), prepare: vi.fn(), persist: vi.fn(), secrets: vi.fn() }));
 vi.mock("./prisma", () => ({ prisma: { subscription: { findFirst: mocks.findFirst } } }));
 vi.mock("./crypto", () => ({ encryptJson: (value: unknown) => JSON.stringify(value), decryptJson: (value: string) => JSON.parse(value) }));
 vi.mock("@subboost/server-core/subscription", () => ({ refreshNodeSnapshot: mocks.refresh, prepareRefreshCacheResult: mocks.prepare }));
 vi.mock("./subscription-service", () => ({
   MAX_NODES_PER_SUBSCRIPTION: 10000,
   buildSubscriptionFetchCallbacks: () => ({}),
-  readSubscriptionSecrets: () => ({ urls: ["https://example.com/?token=secret-link"], nodes: [{ name: "old", type: "ss", server: "example.com", port: 443, password: "secret-old" }], config: { customRules: [{ value: "direct.example" }] } }),
+  readSubscriptionSecrets: mocks.secrets,
   persistRefreshSuccess: mocks.persist,
 }));
 let fixture: { id: string; ownerId: string; encryptedConfig: string; encryptedNodes: string; encryptedUrls: string; updatedAt: Date; autoUpdateInterval: number | null };
 
 beforeEach(() => {
   vi.useRealTimers(); vi.clearAllMocks();
+  const store = (globalThis as unknown as { subboostUpdatePreviews: { pending: Map<string, unknown>; checking: Set<string> } }).subboostUpdatePreviews;
+  store.pending.clear(); store.checking.clear();
+  mocks.secrets.mockReturnValue({ urls: ["https://example.com/?token=secret-link"], nodes: [{ name: "old", type: "ss", server: "example.com", port: 443, password: "secret-old" }], config: { customRules: [{ value: "direct.example" }] } });
   fixture = { id: crypto.randomUUID(), ownerId: "owner", encryptedConfig: "encrypted-config", encryptedNodes: "encrypted-nodes", encryptedUrls: "encrypted-urls", updatedAt: new Date(), autoUpdateInterval: null };
   mocks.findFirst.mockImplementation(async ({ where }) => where.ownerId === "owner" ? { ...fixture } : null);
   mocks.refresh.mockResolvedValue({ nodes: [{ name: "old", type: "ss", server: "example.com", port: 443, password: "secret-new" }], savedSources: [{ id: "s1", type: "url", content: "https://example.com/?token=secret-link" }], failedSources: [], failedSourceCount: 0, subscriptionInfo: {} });
@@ -23,6 +26,59 @@ beforeEach(() => {
 });
 
 describe("check, preview and confirm update", () => {
+  it("reports unavailable subscriptions and returns saved nodes only for the current version", async () => {
+    await expect(maintenanceSubscription("other", fixture.id)).rejects.toThrow("无权访问");
+    expect(await maintenanceTestNodes("owner", fixture.id, subscriptionVersion(fixture))).toEqual(mocks.secrets().nodes);
+    const preview = await checkSubscriptionUpdate("owner", fixture.id);
+    expect(latestUpdatePreview("other", fixture.id)).toBeUndefined();
+    expect(latestUpdatePreview("owner", "another")).toBeUndefined();
+    expect(latestUpdatePreview("owner", fixture.id)?.id).toBe(preview.id);
+    await expect(maintenanceTestNodes("owner", fixture.id, "old-version", preview.id)).rejects.toThrow("预览已失效");
+    fixture.encryptedNodes = "edited";
+    await expect(maintenanceTestNodes("owner", fixture.id, preview.baseVersion, preview.id)).rejects.toThrow("预览已失效");
+  });
+  it.each(["empty_result", "node_limit_exceeded"])("explains a blocked %s preview without writing it", async (reason) => {
+    mocks.prepare.mockReturnValue({ ok: false, reason });
+    const preview = await checkSubscriptionUpdate("owner", fixture.id);
+    expect(preview.canApply).toBe(false);
+    expect(preview.message).toContain(reason === "empty_result" ? "没有可用节点" : "超过本机上限");
+    expect(mocks.persist).not.toHaveBeenCalled();
+  });
+  it("shows partial failures, delegated providers and DNS changes without revealing source URLs", async () => {
+    const savedSources = [{ id: "bad", tag: "Failed source" }, { id: "provider", useProxyProviders: true }, { id: "good", tag: "Good source", dnsDependencies: { policies: {}, hosts: {} } }];
+    mocks.secrets.mockReturnValue({ urls: [], nodes: [], config: { sources: [{ id: "good" }] } });
+    mocks.refresh.mockResolvedValue({ nodes: [], savedSources, failedSources: [{ id: "bad" }], failedSourceCount: 1 });
+    const preview = await checkSubscriptionUpdate("owner", fixture.id);
+    expect(preview.sources.map((source) => source.status)).toEqual(["failed", "delegated", "updated"]);
+    expect(preview.sources[2].dnsChanged).toBe(true); expect(preview.message).toContain("部分源失败");
+  });
+  it("replaces superseded previews, limits pending work and releases the checking lock after failure", async () => {
+    const old = await checkSubscriptionUpdate("owner", fixture.id);
+    const fresh = await checkSubscriptionUpdate("owner", fixture.id);
+    await expect(applySubscriptionUpdate("owner", fixture.id, old.id)).rejects.toThrow("过期");
+    expect(latestUpdatePreview("owner", fixture.id)?.id).toBe(fresh.id);
+    for (let i = 0; i < 31; i++) { fixture.id = `other-${i}`; await checkSubscriptionUpdate("owner", fixture.id); }
+    fixture.id = "overflow";
+    await expect(checkSubscriptionUpdate("owner", fixture.id)).rejects.toThrow("预览过多");
+    await expect(checkSubscriptionUpdate("owner", fixture.id)).rejects.toThrow("预览过多");
+  });
+  it("rejects overlapping checks and duplicate applies while preserving the active preview", async () => {
+    const snapshot = await mocks.refresh();
+    let finishRefresh!: (value: unknown) => void;
+    mocks.refresh.mockImplementationOnce(() => new Promise((resolve) => { finishRefresh = resolve; }));
+    const checking = checkSubscriptionUpdate("owner", fixture.id);
+    await vi.waitFor(() => expect(finishRefresh).toBeDefined());
+    await expect(checkSubscriptionUpdate("owner", fixture.id)).rejects.toThrow("正在检查");
+    finishRefresh(snapshot); const preview = await checking;
+    let finishSave!: (value: boolean) => void;
+    mocks.persist.mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve; }));
+    const applying = applySubscriptionUpdate("owner", fixture.id, preview.id);
+    await vi.waitFor(() => expect(finishSave).toBeDefined());
+    await expect(applySubscriptionUpdate("owner", fixture.id, preview.id)).rejects.toThrow("正在应用");
+    await checkSubscriptionUpdate("owner", fixture.id);
+    expect(latestUpdatePreview("owner", fixture.id)?.id).toBe(preview.id);
+    finishSave(true); await applying;
+  });
   it("checking makes no writes, reveals no credentials and applying uses the exact cached candidate", async () => {
     const preview = await checkSubscriptionUpdate("owner", fixture.id);
     expect(mocks.persist).not.toHaveBeenCalled();
