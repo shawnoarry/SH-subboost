@@ -4,7 +4,7 @@
   <h1>SubBoost</h1>
   <p>
     <img src="https://img.shields.io/badge/platform-Linux%20%2B%20Docker-lightgrey.svg" alt="平台：Linux + Docker">
-    <img src="https://img.shields.io/badge/version-2.9.0-green.svg" alt="版本 2.9.0">
+    <img src="https://img.shields.io/badge/version-2.10.0-green.svg" alt="版本 2.10.0">
     <a href="https://subboost.org"><img src="https://img.shields.io/badge/app-subboost.org-brightgreen.svg" alt="在线入口"></a>
     <a href="https://docs.subboost.org"><img src="https://img.shields.io/badge/docs-subboost.org-blue.svg" alt="文档"></a>
     <img src="https://img.shields.io/badge/image-GHCR-blue.svg" alt="GHCR 镜像">
@@ -65,7 +65,7 @@ npm run check:local-app
 - 部署文档：[https://docs.subboost.org](https://docs.subboost.org)
 - 发行公告：[docs/release-notes.md](./docs/release-notes.md)
 - 更新日志：[https://subboost.org/faq](https://subboost.org/faq)
-- 社区反馈：[LINUX DO](https://linux.do/) & [IDC Flare](https://idcflare.com/)；同时感谢论坛中小伙伴们的积极讨论和反馈
+- 论坛反馈：[LINUX DO](https://linux.do/) & [IDC Flare](https://idcflare.com/)
 
 ## ⭐轨迹
 

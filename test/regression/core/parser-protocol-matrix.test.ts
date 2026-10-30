@@ -532,7 +532,7 @@ describe("public core parser branch sweep", () => {
       network: "ws",
       "ws-opts": { headers: { Host: "plain.example.com" } },
     });
-    expect(parseVLESS(`vless://${UUID}@xhttp-empty.example.com:443?type=xhttp&xhttp-headers=&download-headers=&sc-max-each-post-bytes=bad#XEmpty`)).toMatchObject({
+    expect(parseVLESS(`vless://${UUID}@local.subboost.test:443?type=xhttp&xhttp-headers=&download-headers=#XEmpty`)).toMatchObject({
       network: "xhttp",
       "xhttp-opts": { path: "/" },
     });

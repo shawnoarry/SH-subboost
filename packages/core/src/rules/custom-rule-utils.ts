@@ -11,6 +11,7 @@ export const CUSTOM_RULE_TYPES = [
   "PROCESS-NAME",
   "DST-PORT",
   "SRC-PORT",
+  "AND",
 ] as const satisfies readonly CustomRule["type"][];
 
 const customRuleTypeSet = new Set<string>(CUSTOM_RULE_TYPES);

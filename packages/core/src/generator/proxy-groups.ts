@@ -18,10 +18,12 @@ import type {
 } from "@subboost/core/types/config";
 import { resolveProxyGroupMembers } from "@subboost/core/proxy-group-advanced";
 import { isSubscriptionInfoNodeName } from "@subboost/core/subscription/info-node-name";
+import { isDisabledCustomProxyGroupTarget } from "@subboost/core/proxy-group-targets";
 
 import { PROXY_GROUP_MODULES, type ProxyGroupModule, type ProxyGroupRule } from "./proxy-group-modules";
 import {
   EXPERIMENTAL_CN_RULE,
+  buildModuleNameMap,
   generateRules,
   resolveModuleName,
   resolveModuleNameFromModule,
@@ -83,22 +85,6 @@ function usesFilteredNodeMembers(group: CustomProxyGroup): boolean {
 
 function isIncludedInGroupMembers(group: CustomProxyGroup): boolean {
   return group.includeInGroupMembers === true;
-}
-
-function customTargetIsDisabled(
-  target: CustomRuleSet["target"],
-  customProxyGroups: CustomProxyGroup[]
-): boolean {
-  const disabled = customProxyGroups.filter((group) => group && group.enabled === false);
-  if (disabled.length === 0) return false;
-  if (typeof target === "object" && target?.kind === "custom") {
-    return disabled.some((group) => group.id === target.id);
-  }
-  if (typeof target === "string") {
-    const name = target.trim();
-    return Boolean(name) && disabled.some((group) => group.name.trim() === name);
-  }
-  return false;
 }
 
 /**
@@ -233,17 +219,23 @@ export function generateProxyGroups(options: ProxyGroupGenerateOptions): ProxyGr
     strategy?: LoadBalanceStrategy,
     extraFields: Record<string, unknown> = providerUse,
     groupTestUrl?: string,
-  ): ProxyGroup =>
-    buildTypedProxyGroup({
-      name,
-      groupType,
-      proxies,
-      testUrl: groupType === "url-test" ? groupTestUrl || testUrl : testUrl,
-      testInterval,
-      strategy,
-      extraFields,
-      urlTestLazy: false,
-    });
+  ): ProxyGroup => {
+    const moduleId = Object.keys(moduleNames).find((id) => moduleNames[id] === name);
+    const advanced = moduleId ? proxyGroupAdvanced[moduleId] : activeCustomProxyGroups.find((group) => group.name === name)?.advanced;
+    return {
+      ...buildTypedProxyGroup({
+        name,
+        groupType,
+        proxies,
+        testUrl: groupType === "url-test" ? groupTestUrl || testUrl : testUrl,
+        testInterval: advanced?.testInterval ?? testInterval,
+        strategy,
+        extraFields,
+        urlTestLazy: advanced?.lazy ?? false,
+      }),
+      ...(groupType === "url-test" && advanced?.tolerance !== undefined ? { tolerance: advanced.tolerance } : {}),
+    };
+  };
 
   // 辅助函数：生成单个代理组
   const generateGroup = (module: ProxyGroupModule) => {
@@ -495,6 +487,7 @@ export function generateRuleProviders(options: ProxyGroupGenerateOptions): Recor
   } = options;
   const providers: Record<string, RuleProvider> = {};
   const enabledSet = new Set(enabledModules);
+  const moduleNames = buildModuleNameMap(options.proxyGroupNameOverrides);
 
   // 预设模块的规则
   for (const proxyModule of PROXY_GROUP_MODULES) {
@@ -527,7 +520,7 @@ export function generateRuleProviders(options: ProxyGroupGenerateOptions): Recor
 
   // 用户新增规则集统一由 customRuleSets 提供，不再挂在某个分流组对象上。
   for (const ruleSet of customRuleSets) {
-    if (customTargetIsDisabled(ruleSet.target, customProxyGroups)) continue;
+    if (isDisabledCustomProxyGroupTarget(ruleSet.target, { moduleNames, customProxyGroups })) continue;
     if (!ruleSet?.id || !ruleSet.path || providers[ruleSet.id]) continue;
     providers[ruleSet.id] = {
       type: "http",

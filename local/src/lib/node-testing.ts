@@ -5,7 +5,7 @@ import http from "node:http";
 import net from "node:net";
 import { randomBytes, randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import yaml from "js-yaml";
+import { loadMihomoYaml } from "@subboost/core/config/yaml-schema";
 import { applySourceDnsDependencies, dnsPatternMatches, type SourceDnsCarrier } from "@subboost/core/subscription/source-dns";
 import { DEFAULT_DNS_CONFIG } from "@subboost/core/generator/dns";
 import { isMihomoSupportedProxyNode, sanitizeMihomoProxyNode } from "@subboost/core/mihomo/proxy-sanitizer";
@@ -51,7 +51,7 @@ export async function nodeTestEngine() {
 export function isolatedProbeConfig(nodes: ParsedNode[], apiPort: number, secret: string, interfaceName: string, savedConfig?: Record<string, unknown>) {
   let network: Record<string, unknown> = {};
   if (savedConfig) {
-    const base = typeof savedConfig.dnsYaml === "string" && savedConfig.dnsYaml.trim() ? yaml.load(savedConfig.dnsYaml) as Record<string, unknown> : {};
+    const base = typeof savedConfig.dnsYaml === "string" && savedConfig.dnsYaml.trim() ? loadMihomoYaml(savedConfig.dnsYaml) as Record<string, unknown> : {};
     const merged = applySourceDnsDependencies({ dns: DEFAULT_DNS_CONFIG, ...base }, Array.isArray(savedConfig.sources) ? savedConfig.sources as SourceDnsCarrier[] : [], nodes);
     const dns = merged.dns as Record<string, unknown>;
     const scopePolicy = (value: unknown) => value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => nodes.some((node) => typeof node.server === "string" && dnsPatternMatches(key, node.server)))) : {};

@@ -81,6 +81,7 @@ function normalizeCustomRules(value: unknown): CustomRule[] | undefined {
     "PROCESS-NAME",
     "DST-PORT",
     "SRC-PORT",
+    "AND",
   ]);
 
   const out: CustomRule[] = [];

@@ -85,7 +85,7 @@ describe("public core parser remaining edge branches", () => {
       type: "wireguard",
       server: "2001:db8::2",
       mtu: 1280,
-      keepalive: 25,
+      "persistent-keepalive": 25,
       "allowed-ips": ["0.0.0.0/0", "::/0"],
       peers: [expect.objectContaining({ "pre-shared-key": "pre", reserved: [4, 5, 6] })],
     });

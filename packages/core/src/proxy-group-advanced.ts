@@ -196,6 +196,9 @@ export function normalizeProxyGroupAdvancedConfig(value: unknown): ProxyGroupAdv
   const testUrl = normalizeGroupTestUrl(item.testUrl);
   return {
     ...(testUrl ? { testUrl } : {}),
+    ...(typeof item.testInterval === "number" && Number.isInteger(item.testInterval) && item.testInterval > 0 ? { testInterval: item.testInterval } : {}),
+    ...(typeof item.lazy === "boolean" ? { lazy: item.lazy } : {}),
+    ...(typeof item.tolerance === "number" && Number.isFinite(item.tolerance) && item.tolerance >= 0 ? { tolerance: item.tolerance } : {}),
     ...(sourceIds.length > 0 ? { sourceIds } : {}),
     ...(regions.length > 0 ? { regions } : {}),
     ...(includeRegex ? { includeRegex } : {}),
