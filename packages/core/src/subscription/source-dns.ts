@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import { loadMihomoYaml } from "../config/yaml-schema";
 import type { ParsedNode } from "../types/node";
 import { stableJsonStringify } from "../node-identity";
 
@@ -65,7 +65,7 @@ export function extractSourceDnsDependencies(content: string, nodes: ParsedNode[
       if (!/^[a-z\d+/=_\s-]+$/i.test(text)) return undefined;
       text = new TextDecoder().decode(Uint8Array.from(atob(text.replace(/\s/g, "").replace(/-/g, "+").replace(/_/g, "/")), (character) => character.charCodeAt(0)));
     }
-    const parsed: unknown = yaml.load(text, { schema: yaml.JSON_SCHEMA });
+    const parsed: unknown = loadMihomoYaml(text);
     if (!record(parsed) || (!record(parsed.dns) && !record(parsed.hosts))) return undefined;
     const dns = record(parsed.dns) ? parsed.dns : {};
     const policies = { ...(record(dns["nameserver-policy"]) ? dns["nameserver-policy"] : {}), ...(record(dns["proxy-server-nameserver-policy"]) ? dns["proxy-server-nameserver-policy"] : {}) };

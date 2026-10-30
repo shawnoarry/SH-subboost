@@ -443,6 +443,7 @@ describe("TemplateLibrarySurface extra branch coverage", () => {
       minimal: { id: "builtin-minimal", engagementCount: 0, isEngaged: false },
       standard: { id: "builtin-standard", engagementCount: 0, isEngaged: false },
       full: { id: "builtin-full", engagementCount: 0, isEngaged: false },
+      "ai-split": { id: undefined, engagementCount: 0, isEngaged: false },
     });
     expect(mocks.captures.buttons.at(-1)).toMatchObject({ disabled: true });
 

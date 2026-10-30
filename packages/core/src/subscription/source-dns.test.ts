@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import type { ParsedNode } from "../types/node";
 import { applySourceDnsDependencies, extractSourceDnsDependencies, normalizeSourceDnsDependencies, refreshSourceDnsDependencies } from "./source-dns";
 import { generateClashConfig } from "../generator";
@@ -8,6 +8,10 @@ const node = (server = "entry.provider.example", source = "one"): ParsedNode => 
 const dependencies = { policies: { "*.provider.example": ["https://resolver.provider.example/dns-query"] }, hosts: { "resolver.provider.example": ["203.0.113.3"] } };
 const input = yaml.dump({ proxies: [node()], dns: { "nameserver-policy": { ...dependencies.policies, "geosite:cn": ["223.5.5.5"], "unrelated.example": ["1.1.1.1"] } }, hosts: { ...dependencies.hosts, "unrelated.example": ["203.0.113.8"] }, tun: { enable: true }, secret: "never-import-this" });
 describe("source DNS compatibility", () => {
+  it("reads inherited DNS mappings through the common Mihomo YAML compatibility loader", () => {
+    const merged = "defaults: &dns\n  nameserver-policy:\n    '*.provider.example': [https://resolver.provider.example/dns-query]\ndns:\n  <<: *dns\nhosts:\n  resolver.provider.example: [203.0.113.3]\n";
+    expect(extractSourceDnsDependencies(merged, [node()])).toEqual(dependencies);
+  });
   it("extracts only endpoint DNS policies and necessary bootstrap hosts from YAML and base64 YAML", () => {
     expect(extractSourceDnsDependencies(input, [node()])).toEqual(dependencies);
     expect(extractSourceDnsDependencies("---\n" + input, [node()])).toEqual(dependencies);
